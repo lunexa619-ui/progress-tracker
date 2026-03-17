@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study RPG Syllabus Tracker - Debug Version</title>
+    <title>Study RPG Syllabus Tracker - FIXED</title>
     <style>
         * {
             margin: 0;
@@ -315,7 +315,6 @@
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
             border: 2px solid #4a5568;
-            min-height: 200px;
         }
 
         .class-section {
@@ -516,10 +515,6 @@
             }
         }
 
-        .hidden {
-            display: none;
-        }
-
         .setup-notice {
             background: rgba(251, 191, 36, 0.1);
             border: 2px solid #fbbf24;
@@ -543,30 +538,19 @@
             border-radius: 4px;
             font-family: 'Courier New', monospace;
         }
-
-        .debug-info {
-            background: rgba(139, 92, 246, 0.2);
-            border: 2px solid #8b5cf6;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            color: #a0aec0;
-            font-size: 12px;
-            font-family: 'Courier New', monospace;
-        }
     </style>
 </head>
 <body>
     <!-- Login Screen -->
     <div id="loginContainer" class="login-container">
         <h1>🎮 Study RPG Tracker</h1>
-        
+
         <div class="setup-notice">
             <strong>⚠️ Firebase Setup Required</strong>
             Before using this app, you need to:
             <br>1. Create a Firebase project at <code>firebase.google.com</code>
             <br>2. Enable Realtime Database
-            <br>3. Replace the Firebase config below
+            <br>3. Replace the Firebase config in the code
             <br>4. Set database rules to allow read/write for testing
         </div>
 
@@ -592,15 +576,11 @@
     <div id="appContainer" class="app-container">
         <div class="header">
             <h1>🎮 Study RPG Syllabus Tracker</h1>
-            <button class="logout-btn" onclick="logout()">Logout</button>
+            <button class="logout-btn" id="logoutBtn">Logout</button>
         </div>
 
         <div id="syncStatusApp" class="sync-status online" style="max-width: 300px; margin: 0 auto 20px;">
             ☁️ Synced with Cloud
-        </div>
-
-        <div class="debug-info" id="debugInfo">
-            Debug: Current Subject = physics | User = None | Chapters Loaded = No
         </div>
 
         <!-- Dashboard -->
@@ -652,7 +632,7 @@
 
         <!-- Chapters Container -->
         <div id="chaptersContainer" class="chapters-container">
-            <p style="text-align: center; color: #a0aec0;">Loading chapters...</p>
+            <!-- Chapters will be loaded here -->
         </div>
     </div>
 
@@ -664,14 +644,11 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-        import { getDatabase, ref, set, get, onValue, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+        import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 
-        // ============================================
-        // REPLACE THIS WITH YOUR FIREBASE CONFIG
-        // ============================================
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyBKVn0xyx9_bqKn1PGAD73sFINujJuDwVk",
             authDomain: "final-482a4.firebaseapp.com",
@@ -689,50 +666,30 @@
             app = initializeApp(firebaseConfig);
             database = getDatabase(app);
             isFirebaseConnected = true;
-            console.log('✅ Firebase initialized successfully');
+            console.log('✅ Firebase initialized');
         } catch (error) {
-            console.error('❌ Firebase initialization error:', error);
-            updateSyncStatus(false, 'error');
+            console.error('❌ Firebase error:', error);
         }
 
-        // XP Level Thresholds (Level 1-20)
-        const XP_LEVELS = [
-            0, 300, 750, 1500, 2500, 4000, 6000, 8500, 11500, 15000,
-            19000, 24000, 30000, 37000, 45000, 54000, 64000, 75000, 85000
-        ];
-
-        // Task XP Values
-        const TASK_XP = {
-            concept: 10,
-            ncert: 30,
-            pyq: 50,
-            legend: 100
-        };
-
-        // User Credentials
+        // Constants
+        const XP_LEVELS = [0, 300, 750, 1500, 2500, 4000, 6000, 8500, 11500, 15000, 19000, 24000, 30000, 37000, 45000, 54000, 64000, 75000, 85000];
+        const TASK_XP = { concept: 10, ncert: 30, pyq: 50, legend: 100 };
         const USERS = {
-            partnerA: { password: 'study123', name: 'PARTNER A' },
-            partnerB: { password: 'terimkc', name: 'PARTNER B' }
+            partnerA: { password: 'study123', name: 'Partner A' },
+            partnerB: { password: 'terimkc', name: 'Partner B' }
         };
-
-        // Current logged-in user
-        let currentUser = null;
-
-        // Game State
-        let gameData = {
-            partnerA: { xp: 0, level: 1, tasks: {} },
-            partnerB: { xp: 0, level: 1, tasks: {} }
-        };
-
-        // Current subject
-        let currentSubject = 'physics';
-
-        // Storage key for offline fallback
         const STORAGE_KEY = 'studyRPG_SharedData_v1';
 
-        // Sync state
-        let isSyncing = false;
-        let dataListener = null;
+        // State
+        const state = {
+            currentUser: null,
+            currentSubject: 'physics',
+            gameData: {
+                partnerA: { xp: 0, level: 1, tasks: {} },
+                partnerB: { xp: 0, level: 1, tasks: {} }
+            },
+            isSyncing: false
+        };
 
         // Chapter Data
         const CHAPTERS = {
@@ -743,186 +700,65 @@
                     { name: "Motion in a Plane", desc: "Scalar/Vector products, Projectile motion, Uniform circular motion.", behemoth: false },
                     { name: "Laws of Motion", desc: "Newton's Laws, Conservation of momentum, Equilibrium of forces, Friction, Centripetal force.", behemoth: false },
                     { name: "Work, Energy, and Power", desc: "Work-energy theorem, Potential energy of a spring, Conservative forces, Collisions.", behemoth: false },
-                    { name: "Rotational Motion", desc: "Center of mass, Torque, Angular momentum, Moment of inertia, Radius of gyration.", behemoth: true },
+                    { name: "Rotational Motion", desc: "Center of mass, Torque, Angular momentum, Moment of inertia, Radius of gyration.", behemoth: true }
                 ],
                 class12: [
                     { name: "Electric Charges & Fields", desc: "Coulomb's law, Electric field lines, Electric dipole, Gauss's theorem.", behemoth: true },
                     { name: "Electrostatic Potential", desc: "Equipotential surfaces, Dielectrics, Capacitors in series/parallel, Energy in capacitor.", behemoth: false },
+                    { name: "Current Electricity", desc: "Ohm's law, V-I characteristics, Kirchhoff's laws, Wheatstone bridge.", behemoth: true }
                 ]
             },
             chemistry: {
                 class11: [
                     { name: "Basic Concepts", desc: "Dalton's theory, Mole concept, Stoichiometry.", behemoth: false },
                     { name: "Structure of Atom", desc: "Bohr's model, Quantum numbers, Aufbau principle, Pauli's exclusion.", behemoth: false },
+                    { name: "Chemical Bonding", desc: "VSEPR theory, Hybridization (sp,sp2,sp3,dsp2), Hydrogen bonding.", behemoth: true }
                 ],
                 class12: [
                     { name: "Solutions", desc: "Raoult's law, Colligative properties, Van't Hoff factor.", behemoth: false },
+                    { name: "Electrochemistry", desc: "Nernst equation, Kohlrausch's Law, Electrolytic cells.", behemoth: false }
                 ]
             },
             maths: {
                 class11: [
                     { name: "Sets & Functions", desc: "Venn diagrams, Domain/Range of functions, Trigonometric identities.", behemoth: false },
+                    { name: "Algebra", desc: "Complex numbers, Permutations & Combinations, Binomial Theorem, GP.", behemoth: false }
                 ],
                 class12: [
                     { name: "Calculus", desc: "Continuity, Chain rule, Maxima/Minima, Integration by parts, Definite integrals.", behemoth: true },
+                    { name: "Vectors & 3D", desc: "Scalar/Vector products, Direction cosines, Shortest distance between lines.", behemoth: true }
                 ]
             },
             cs: {
                 class12: [
                     { name: "Computational Thinking-2", desc: "Python Revision, Functions, Exception Handling, Text/CSV/Binary File handling.", behemoth: true },
+                    { name: "Computer Networks", desc: "Topologies, Protocols (HTTP, TCP/IP), Network Devices (Routers, Switches).", behemoth: false }
                 ]
             },
             english: {
                 class12: [
                     { name: "Literature (Flamingo/Vistas)", desc: "Chapter summaries and theme analysis for all prose and poetry.", behemoth: false },
+                    { name: "Writing Skills", desc: "Format for Formal Invitations, Letters to Editor, Article writing.", behemoth: false }
                 ]
             }
         };
 
-        // ==========================================
-        // DEBUG FUNCTION
-        // ==========================================
-        function updateDebugInfo() {
-            const debugEl = document.getElementById('debugInfo');
-            const chaptersContainer = document.getElementById('chaptersContainer');
-            const hasContent = chaptersContainer && chaptersContainer.children.length > 0;
-            
-            if (debugEl) {
-                debugEl.textContent = `Debug: Current Subject = ${currentSubject} | User = ${currentUser || 'None'} | Chapters in DOM = ${hasContent ? 'YES' : 'NO'} | Chapters Data Exists = ${CHAPTERS[currentSubject] ? 'YES' : 'NO'}`;
+        // Utility Functions
+        function calculateLevel(xp) {
+            for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
+                if (xp >= XP_LEVELS[i]) return i + 1;
             }
-            console.log('=== DEBUG INFO ===');
-            console.log('Current Subject:', currentSubject);
-            console.log('Current User:', currentUser);
-            console.log('Chapters for subject:', CHAPTERS[currentSubject]);
-            console.log('==================');
+            return 1;
         }
 
-        // ==========================================
-        // FIREBASE SYNC FUNCTIONS
-        // ==========================================
-
-        // Save data to Firebase
-        async function saveToFirebase() {
-            if (!isFirebaseConnected) {
-                console.warn('Firebase not connected, saving to localStorage only');
-                saveToLocalStorage();
-                return;
-            }
-
-            try {
-                isSyncing = true;
-                updateSyncStatus(true, 'syncing');
-
-                const dbRef = ref(database, 'studyRPG/gameData');
-                await set(dbRef, gameData);
-
-                console.log('✅ Data synced to Firebase:', gameData);
-                updateSyncStatus(true, 'saved');
-
-                // Also save to localStorage as backup
-                saveToLocalStorage();
-            } catch (error) {
-                console.error('❌ Firebase save error:', error);
-                updateSyncStatus(false, 'error');
-                // Fallback to localStorage
-                saveToLocalStorage();
-            } finally {
-                isSyncing = false;
-            }
+        function getXPForNextLevel(level) {
+            return level >= 20 ? XP_LEVELS[18] : XP_LEVELS[level];
         }
 
-        // Load data from Firebase
-        async function loadFromFirebase() {
-            if (!isFirebaseConnected) {
-                console.warn('Firebase not connected, loading from localStorage');
-                loadFromLocalStorage();
-                return;
-            }
-
-            try {
-                updateSyncStatus(true, 'syncing');
-
-                const dbRef = ref(database, 'studyRPG/gameData');
-                const snapshot = await get(dbRef);
-
-                if (snapshot.exists()) {
-                    gameData = snapshot.val();
-                    console.log('✅ Data loaded from Firebase:', gameData);
-
-                    // Ensure both users exist
-                    if (!gameData.partnerA) {
-                        gameData.partnerA = { xp: 0, level: 1, tasks: {} };
-                    }
-                    if (!gameData.partnerB) {
-                        gameData.partnerB = { xp: 0, level: 1, tasks: {} };
-                    }
-                } else {
-                    console.log('No Firebase data found, using defaults');
-                    gameData = {
-                        partnerA: { xp: 0, level: 1, tasks: {} },
-                        partnerB: { xp: 0, level: 1, tasks: {} }
-                    };
-                    await saveToFirebase();
-                }
-
-                updateSyncStatus(true, 'saved');
-
-                // Save to localStorage as backup
-                saveToLocalStorage();
-            } catch (error) {
-                console.error('❌ Firebase load error:', error);
-                updateSyncStatus(false, 'error');
-                // Fallback to localStorage
-                loadFromLocalStorage();
-            }
-        }
-
-        // Listen for real-time updates from Firebase
-        function setupRealtimeListener() {
-            if (!isFirebaseConnected) return;
-
-            const dbRef = ref(database, 'studyRPG/gameData');
-
-            dataListener = onValue(dbRef, (snapshot) => {
-                if (snapshot.exists() && !isSyncing) {
-                    const newData = snapshot.val();
-
-                    // Only update if data actually changed
-                    if (JSON.stringify(newData) !== JSON.stringify(gameData)) {
-                        console.log('🔄 Real-time update received from Firebase');
-                        gameData = newData;
-
-                        // Update UI
-                        updateDashboard();
-                        loadChapters(); // Reload chapters to reflect task states
-
-                        updateSyncStatus(true, 'saved');
-                    }
-                }
-            }, (error) => {
-                console.error('❌ Firebase listener error:', error);
-                updateSyncStatus(false, 'error');
-            });
-
-            console.log('✅ Real-time listener activated');
-        }
-
-        // Remove listener on logout
-        function removeRealtimeListener() {
-            if (dataListener) {
-                dataListener = null;
-                console.log('🔌 Real-time listener removed');
-            }
-        }
-
-        // ==========================================
-        // LOCALSTORAGE FALLBACK
-        // ==========================================
-
+        // Storage Functions
         function saveToLocalStorage() {
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData));
-                console.log('💾 Data saved to localStorage');
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state.gameData));
             } catch (error) {
                 console.error('❌ localStorage save error:', error);
             }
@@ -934,8 +770,7 @@
                 if (saved) {
                     const parsedData = JSON.parse(saved);
                     if (parsedData.partnerA && parsedData.partnerB) {
-                        gameData = parsedData;
-                        console.log('💾 Data loaded from localStorage');
+                        state.gameData = parsedData;
                     }
                 }
             } catch (error) {
@@ -943,74 +778,67 @@
             }
         }
 
-        // ==========================================
-        // UI UPDATE FUNCTIONS
-        // ==========================================
-
-        function updateSyncStatus(success, type = 'saved') {
-            const statusLogin = document.getElementById('syncStatus');
-            const statusApp = document.getElementById('syncStatusApp');
-
-            if (success) {
-                if (type === 'syncing') {
-                    if (statusLogin) {
-                        statusLogin.className = 'sync-status syncing';
-                        statusLogin.textContent = '🔄 Syncing...';
-                    }
-                    if (statusApp) {
-                        statusApp.className = 'sync-status syncing';
-                        statusApp.textContent = '🔄 Syncing to Cloud...';
-                    }
-                } else if (type === 'saved') {
-                    if (statusLogin) {
-                        statusLogin.className = 'sync-status online';
-                        statusLogin.textContent = '☁️ Cloud Sync Active';
-                    }
-                    if (statusApp) {
-                        statusApp.className = 'sync-status online';
-                        statusApp.textContent = '✅ Synced with Cloud';
-
-                        // Flash sync indicator
-                        setTimeout(() => {
-                            if (statusApp) {
-                                statusApp.textContent = '☁️ Synced with Cloud';
-                            }
-                        }, 2000);
-                    }
-                }
-            } else {
-                if (statusLogin) {
-                    statusLogin.className = 'sync-status offline';
-                    statusLogin.textContent = '⚠️ Offline Mode';
-                }
-                if (statusApp) {
-                    statusApp.className = 'sync-status offline';
-                    statusApp.textContent = '⚠️ Offline - Using Local Storage';
-                }
+        // Firebase Functions
+        async function saveToFirebase() {
+            if (!isFirebaseConnected) {
+                saveToLocalStorage();
+                return;
+            }
+            try {
+                state.isSyncing = true;
+                const dbRef = ref(database, 'studyRPG/gameData');
+                await set(dbRef, state.gameData);
+                saveToLocalStorage();
+            } catch (error) {
+                console.error('❌ Firebase save error:', error);
+                saveToLocalStorage();
+            } finally {
+                state.isSyncing = false;
             }
         }
 
-        // Calculate Level from XP
-        function calculateLevel(xp) {
-            for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
-                if (xp >= XP_LEVELS[i]) {
-                    return i + 1;
-                }
+        async function loadFromFirebase() {
+            if (!isFirebaseConnected) {
+                loadFromLocalStorage();
+                return;
             }
-            return 1;
+            try {
+                const dbRef = ref(database, 'studyRPG/gameData');
+                const snapshot = await get(dbRef);
+                if (snapshot.exists()) {
+                    state.gameData = snapshot.val();
+                    if (!state.gameData.partnerA) state.gameData.partnerA = { xp: 0, level: 1, tasks: {} };
+                    if (!state.gameData.partnerB) state.gameData.partnerB = { xp: 0, level: 1, tasks: {} };
+                } else {
+                    await saveToFirebase();
+                }
+                saveToLocalStorage();
+            } catch (error) {
+                console.error('❌ Firebase load error:', error);
+                loadFromLocalStorage();
+            }
         }
 
-        // Get XP needed for next level
-        function getXPForNextLevel(level) {
-            if (level >= 20) return XP_LEVELS[18];
-            return XP_LEVELS[level];
+        function setupRealtimeListener() {
+            if (!isFirebaseConnected) return;
+            const dbRef = ref(database, 'studyRPG/gameData');
+            onValue(dbRef, (snapshot) => {
+                if (snapshot.exists() && !state.isSyncing) {
+                    const newData = snapshot.val();
+                    if (JSON.stringify(newData) !== JSON.stringify(state.gameData)) {
+                        state.gameData = newData;
+                        updateDashboard();
+                        loadChapters();
+                    }
+                }
+            });
         }
 
-        // Update Dashboard
+        // UI Functions
         function updateDashboard() {
             // Update Partner A
-            const levelA = calculateLevel(gameData.partnerA.xp);
-            const xpA = gameData.partnerA.xp;
+            const levelA = calculateLevel(state.gameData.partnerA.xp);
+            const xpA = state.gameData.partnerA.xp;
             const nextLevelA = getXPForNextLevel(levelA);
             const prevLevelA = levelA > 1 ? XP_LEVELS[levelA - 1] : 0;
             const progressA = ((xpA - prevLevelA) / (nextLevelA - prevLevelA)) * 100;
@@ -1020,8 +848,8 @@
             document.getElementById('xpTextA').textContent = `${xpA} / ${nextLevelA} XP`;
 
             // Update Partner B
-            const levelB = calculateLevel(gameData.partnerB.xp);
-            const xpB = gameData.partnerB.xp;
+            const levelB = calculateLevel(state.gameData.partnerB.xp);
+            const xpB = state.gameData.partnerB.xp;
             const nextLevelB = getXPForNextLevel(levelB);
             const prevLevelB = levelB > 1 ? XP_LEVELS[levelB - 1] : 0;
             const progressB = ((xpB - prevLevelB) / (nextLevelB - prevLevelB)) * 100;
@@ -1055,127 +883,34 @@
             }
         }
 
-        // Initialize
-        async function init() {
-            console.log('🚀 Initializing app...');
-            await loadFromFirebase();
-            setupRealtimeListener();
-            updateDashboard();
-            
-            // IMPORTANT: Load chapters immediately after login
-            console.log('📚 Loading initial chapters...');
-            loadChapters();
-            updateDebugInfo();
-        }
-
-        // Login
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            if (USERS[username] && USERS[username].password === password) {
-                currentUser = username;
-                console.log('✅ User logged in:', currentUser);
-                document.getElementById('loginContainer').style.display = 'none';
-                document.getElementById('appContainer').classList.add('active');
-                await init();
-            } else {
-                alert('Invalid username or password!');
-            }
-        });
-
-        // Logout
-        window.logout = function() {
-            currentUser = null;
-            removeRealtimeListener();
-            document.getElementById('loginContainer').style.display = 'block';
-            document.getElementById('appContainer').classList.remove('active');
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-        }
-
-        // Show Subject - FIXED VERSION
-        window.showSubject = function(subject) {
-            console.log('📖 Switching to subject:', subject);
-            currentSubject = subject;
-
-            // Update active tab
-            const tabs = document.querySelectorAll('.subject-tab');
-            tabs.forEach(tab => {
-                tab.classList.remove('active');
-                if (tab.getAttribute('data-subject') === subject) {
-                    tab.classList.add('active');
-                }
-            });
-
-            loadChapters();
-            updateDebugInfo();
-        }
-
-        // Setup subject tab click handlers
-        function setupSubjectTabs() {
-            console.log('🎯 Setting up subject tab click handlers...');
-            const subjectTabs = document.querySelectorAll('.subject-tab');
-            subjectTabs.forEach(tab => {
-                const subject = tab.getAttribute('data-subject');
-                tab.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    console.log('🖱️ Subject tab clicked:', subject);
-                    showSubject(subject);
-                });
-            });
-            console.log('✅ Subject tabs setup complete. Total tabs:', subjectTabs.length);
-        }
-
-        // Load Chapters
         function loadChapters() {
-            console.log('📚 Loading chapters for subject:', currentSubject);
             const container = document.getElementById('chaptersContainer');
-            
-            if (!container) {
-                console.error('❌ Chapters container not found!');
-                return;
-            }
+            const subjectData = CHAPTERS[state.currentSubject];
 
-            const subjectData = CHAPTERS[currentSubject];
-            
             if (!subjectData) {
-                console.error('❌ No data found for subject:', currentSubject);
-                container.innerHTML = '<p style="text-align: center; color: #ef4444;">No chapters found for this subject.</p>';
+                container.innerHTML = '<p style="text-align: center; color: #ef4444;">No chapters found.</p>';
                 return;
             }
 
             let html = '';
-
             for (const [className, chapters] of Object.entries(subjectData)) {
                 const classTitle = className === 'class11' ? 'Class 11' : 'Class 12';
-                html += `<div class="class-section">
-                    <h2 class="class-header">${classTitle}</h2>`;
-
+                html += `<div class="class-section"><h2 class="class-header">${classTitle}</h2>`;
                 chapters.forEach((chapter, index) => {
-                    const chapterId = `${currentSubject}_${className}_${index}`;
+                    const chapterId = `${state.currentSubject}_${className}_${index}`;
                     html += renderChapter(chapter, chapterId);
                 });
-
                 html += '</div>';
             }
-
             container.innerHTML = html;
-            console.log('✅ Chapters loaded successfully. HTML length:', html.length);
         }
 
-        // Render Chapter
         function renderChapter(chapter, chapterId) {
             const behemothBadge = chapter.behemoth ? '<span class="behemoth-badge">BEHEMOTH 1.5x</span>' : '';
-
             return `
                 <div class="chapter-item">
-                    <div class="chapter-header" onclick="toggleChapter('${chapterId}')">
-                        <div class="chapter-title">
-                            ${behemothBadge}
-                            ${chapter.name}
-                        </div>
+                    <div class="chapter-header" onclick="window.toggleChapter('${chapterId}')">
+                        <div class="chapter-title">${behemothBadge}${chapter.name}</div>
                         <div class="chapter-toggle" id="toggle_${chapterId}">▼</div>
                     </div>
                     <div class="chapter-content" id="content_${chapterId}">
@@ -1191,17 +926,15 @@
             `;
         }
 
-        // Render Task
         function renderTask(chapterId, taskType, taskName, behemoth) {
             const xp = TASK_XP[taskType];
             const multipliedXP = behemoth ? Math.floor(xp * 1.5) : xp;
             const taskId = `${chapterId}_${taskType}`;
-            const checked = gameData[currentUser]?.tasks[taskId] ? 'checked' : '';
-
+            const checked = state.gameData[state.currentUser]?.tasks[taskId] ? 'checked' : '';
             return `
                 <div class="task-item">
                     <div class="task-checkbox">
-                        <input type="checkbox" id="${taskId}" ${checked} onchange="toggleTask('${taskId}', ${multipliedXP})">
+                        <input type="checkbox" id="${taskId}" ${checked} onchange="window.toggleTask('${taskId}', ${multipliedXP})">
                         <label for="${taskId}">${taskName}</label>
                     </div>
                     <div class="task-xp">+${multipliedXP} XP</div>
@@ -1209,72 +942,88 @@
             `;
         }
 
-        // Toggle Chapter
+        function showSubject(subject) {
+            state.currentSubject = subject;
+            const tabs = document.querySelectorAll('.subject-tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.getAttribute('data-subject') === subject) {
+                    tab.classList.add('active');
+                }
+            });
+            loadChapters();
+        }
+
+        // Global Functions
         window.toggleChapter = function(chapterId) {
             const content = document.getElementById('content_' + chapterId);
             const toggle = document.getElementById('toggle_' + chapterId);
-
             if (content && toggle) {
                 content.classList.toggle('open');
                 toggle.classList.toggle('open');
-                console.log('📂 Toggled chapter:', chapterId);
             }
-        }
+        };
 
-        // Toggle Task
         window.toggleTask = async function(taskId, xp) {
-            console.log('✅ Task toggled:', taskId, 'XP:', xp);
             const checkbox = document.getElementById(taskId);
-            const oldLevel = calculateLevel(gameData[currentUser].xp);
+            const oldLevel = calculateLevel(state.gameData[state.currentUser].xp);
 
             if (checkbox.checked) {
-                gameData[currentUser].tasks[taskId] = true;
-                gameData[currentUser].xp += xp;
+                state.gameData[state.currentUser].tasks[taskId] = true;
+                state.gameData[state.currentUser].xp += xp;
             } else {
-                delete gameData[currentUser].tasks[taskId];
-                gameData[currentUser].xp -= xp;
+                delete state.gameData[state.currentUser].tasks[taskId];
+                state.gameData[state.currentUser].xp -= xp;
             }
 
-            const newLevel = calculateLevel(gameData[currentUser].xp);
-
-            // Check for level up
+            const newLevel = calculateLevel(state.gameData[state.currentUser].xp);
             if (newLevel > oldLevel) {
-                showLevelUp(newLevel);
+                const overlay = document.getElementById('levelUpOverlay');
+                const levelNumber = document.getElementById('levelUpNumber');
+                levelNumber.textContent = newLevel;
+                overlay.classList.add('show');
+                setTimeout(() => overlay.classList.remove('show'), 3000);
             }
 
-            // Save to Firebase
             await saveToFirebase();
             updateDashboard();
-        }
+        };
 
-        // Show Level Up Animation
-        function showLevelUp(level) {
-            const overlay = document.getElementById('levelUpOverlay');
-            const levelNumber = document.getElementById('levelUpNumber');
+        // Event Listeners
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
 
-            levelNumber.textContent = level;
-            overlay.classList.add('show');
+            if (USERS[username] && USERS[username].password === password) {
+                state.currentUser = username;
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('appContainer').classList.add('active');
 
-            setTimeout(() => {
-                overlay.classList.remove('show');
-            }, 3000);
-        }
-
-        // Check Firebase status on load
-        window.addEventListener('load', () => {
-            console.log('🌐 Page loaded');
-            if (!isFirebaseConnected) {
-                updateSyncStatus(false, 'error');
+                await loadFromFirebase();
+                setupRealtimeListener();
+                updateDashboard();
+                loadChapters();
             } else {
-                updateSyncStatus(true, 'saved');
+                alert('Invalid username or password!');
             }
-            // Setup subject tabs
-            setupSubjectTabs();
         });
 
-        // Make functions globally accessible
-        window.gameData = gameData;
-        window.saveToFirebase = saveToFirebase;
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            state.currentUser = null;
+            document.getElementById('loginContainer').style.display = 'block';
+            document.getElementById('appContainer').classList.remove('active');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        });
+
+        // Subject tabs
+        document.querySelectorAll('.subject-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const subject = this.getAttribute('data-subject');
+                showSubject(subject);
+            });
+        });
     </script>
 </body>
 </html>
