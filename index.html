@@ -627,11 +627,11 @@
 
         <!-- Subject Tabs -->
         <div class="subjects-container">
-            <div class="subject-tab active" onclick="showSubject('physics')">⚛️ Physics</div>
-            <div class="subject-tab" onclick="showSubject('chemistry')">🧪 Chemistry</div>
-            <div class="subject-tab" onclick="showSubject('maths')">📐 Mathematics</div>
-            <div class="subject-tab" onclick="showSubject('cs')">💻 Computer Science</div>
-            <div class="subject-tab" onclick="showSubject('english')">📚 English</div>
+            <div class="subject-tab active" data-subject="physics">⚛️ Physics</div>
+            <div class="subject-tab" data-subject="chemistry">🧪 Chemistry</div>
+            <div class="subject-tab" data-subject="maths">📐 Mathematics</div>
+            <div class="subject-tab" data-subject="cs">💻 Computer Science</div>
+            <div class="subject-tab" data-subject="english">📚 English</div>
         </div>
 
         <!-- Chapters Container -->
@@ -657,7 +657,7 @@
         // REPLACE THIS WITH YOUR FIREBASE CONFIG
         // ============================================
         const firebaseConfig = {
-            apiKey: "YOUAIzaSyBKVn0xyx9_bqKn1PGAD73sFINujJuDwVk",
+            apiKey: "AIzaSyBKVn0xyx9_bqKn1PGAD73sFINujJuDwVk",
             authDomain: "final-482a4.firebaseapp.com",
             databaseURL: "https://final-482a4-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "final-482a4",
@@ -1085,17 +1085,32 @@
             document.getElementById('password').value = '';
         }
 
-        // Show Subject
+        // Show Subject - FIXED VERSION
         window.showSubject = function(subject) {
             currentSubject = subject;
 
             // Update active tab
             const tabs = document.querySelectorAll('.subject-tab');
-            tabs.forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.getAttribute('data-subject') === subject) {
+                    tab.classList.add('active');
+                }
+            });
 
             loadChapters();
         }
+
+        // Add event listeners to subject tabs
+        document.addEventListener('DOMContentLoaded', function() {
+            const subjectTabs = document.querySelectorAll('.subject-tab');
+            subjectTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const subject = this.getAttribute('data-subject');
+                    showSubject(subject);
+                });
+            });
+        });
 
         // Load Chapters
         function loadChapters() {
@@ -1211,7 +1226,7 @@
             }, 3000);
         }
 
-        // Check Firebase *** status on load
+        // Check Firebase status on load
         window.addEventListener('load', () => {
             if (!isFirebaseConnected) {
                 updateSyncStatus(false, 'error');
