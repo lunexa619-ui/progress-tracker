@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study RPG Syllabus Tracker</title>
+    <title>Study RPG Syllabus Tracker - Debug Version</title>
     <style>
         * {
             margin: 0;
@@ -315,6 +315,7 @@
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
             border: 2px solid #4a5568;
+            min-height: 200px;
         }
 
         .class-section {
@@ -542,6 +543,17 @@
             border-radius: 4px;
             font-family: 'Courier New', monospace;
         }
+
+        .debug-info {
+            background: rgba(139, 92, 246, 0.2);
+            border: 2px solid #8b5cf6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #a0aec0;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+        }
     </style>
 </head>
 <body>
@@ -554,7 +566,7 @@
             Before using this app, you need to:
             <br>1. Create a Firebase project at <code>firebase.google.com</code>
             <br>2. Enable Realtime Database
-            <br>3. Replace the Firebase config below (lines 450-457)
+            <br>3. Replace the Firebase config below
             <br>4. Set database rules to allow read/write for testing
         </div>
 
@@ -585,6 +597,10 @@
 
         <div id="syncStatusApp" class="sync-status online" style="max-width: 300px; margin: 0 auto 20px;">
             ☁️ Synced with Cloud
+        </div>
+
+        <div class="debug-info" id="debugInfo">
+            Debug: Current Subject = physics | User = None | Chapters Loaded = No
         </div>
 
         <!-- Dashboard -->
@@ -626,7 +642,7 @@
         </div>
 
         <!-- Subject Tabs -->
-        <div class="subjects-container">
+        <div class="subjects-container" id="subjectsContainer">
             <div class="subject-tab active" data-subject="physics">⚛️ Physics</div>
             <div class="subject-tab" data-subject="chemistry">🧪 Chemistry</div>
             <div class="subject-tab" data-subject="maths">📐 Mathematics</div>
@@ -636,7 +652,7 @@
 
         <!-- Chapters Container -->
         <div id="chaptersContainer" class="chapters-container">
-            <!-- Chapters will be dynamically loaded here -->
+            <p style="text-align: center; color: #a0aec0;">Loading chapters...</p>
         </div>
     </div>
 
@@ -668,7 +684,7 @@
 
         // Initialize Firebase
         let app, database, isFirebaseConnected = false;
-        
+
         try {
             app = initializeApp(firebaseConfig);
             database = getDatabase(app);
@@ -728,68 +744,58 @@
                     { name: "Laws of Motion", desc: "Newton's Laws, Conservation of momentum, Equilibrium of forces, Friction, Centripetal force.", behemoth: false },
                     { name: "Work, Energy, and Power", desc: "Work-energy theorem, Potential energy of a spring, Conservative forces, Collisions.", behemoth: false },
                     { name: "Rotational Motion", desc: "Center of mass, Torque, Angular momentum, Moment of inertia, Radius of gyration.", behemoth: true },
-                    { name: "Gravitation", desc: "Kepler's laws, Universal law of gravitation, Acceleration due to gravity (g), Escape velocity.", behemoth: false },
-                    { name: "Mechanical Properties of Solids", desc: "Stress-strain relationship, Hooke's law, Young's modulus.", behemoth: false },
-                    { name: "Mechanical Properties of Fluids", desc: "Pascal's law, Viscosity, Bernoulli's theorem, Surface tension.", behemoth: false },
-                    { name: "Thermodynamics", desc: "Zeroth, First, and Second laws, Isothermal and adiabatic processes.", behemoth: false },
-                    { name: "Kinetic Theory", desc: "Equation of state of a perfect gas, Degrees of freedom, Specific heat capacities.", behemoth: false },
-                    { name: "Oscillations & Waves", desc: "SHM, Resonance, Doppler effect, Speed of traveling waves.", behemoth: false }
                 ],
                 class12: [
                     { name: "Electric Charges & Fields", desc: "Coulomb's law, Electric field lines, Electric dipole, Gauss's theorem.", behemoth: true },
                     { name: "Electrostatic Potential", desc: "Equipotential surfaces, Dielectrics, Capacitors in series/parallel, Energy in capacitor.", behemoth: false },
-                    { name: "Current Electricity", desc: "Ohm's law, V-I characteristics, Kirchhoff's laws, Wheatstone bridge.", behemoth: true },
-                    { name: "Moving Charges & Magnetism", desc: "Biot-Savart law, Ampere's law, Force on a moving charge, Moving coil galvanometer.", behemoth: false },
-                    { name: "Magnetism and Matter", desc: "Bar magnet, Magnetic field lines, Magnetic properties (Dia, Para, Ferro).", behemoth: false },
-                    { name: "Electromagnetic Induction", desc: "Faraday's law, Lenz's Law, Self and mutual induction.", behemoth: false },
-                    { name: "Alternating Current", desc: "LCR series circuit, Resonance, Power in AC circuits, Transformers.", behemoth: false },
-                    { name: "Optics", desc: "Mirror/Lens formula, Total internal reflection, Optical instruments, Huygens principle, Interference.", behemoth: true },
-                    { name: "Modern Physics", desc: "Photoelectric effect, Bohr's model, Mass-energy relation, Nuclear fission/fusion.", behemoth: false },
-                    { name: "Semiconductors", desc: "Energy bands, p-n junction diode, I-V characteristics, Diode as a rectifier.", behemoth: false }
                 ]
             },
             chemistry: {
                 class11: [
                     { name: "Basic Concepts", desc: "Dalton's theory, Mole concept, Stoichiometry.", behemoth: false },
                     { name: "Structure of Atom", desc: "Bohr's model, Quantum numbers, Aufbau principle, Pauli's exclusion.", behemoth: false },
-                    { name: "Chemical Bonding", desc: "VSEPR theory, Hybridization (sp,sp2,sp3,dsp2), Hydrogen bonding.", behemoth: true },
-                    { name: "Equilibrium", desc: "Le Chatelier's principle, pH, Solubility product, Buffer solutions.", behemoth: false },
-                    { name: "Organic Chemistry", desc: "Nomenclature, Isomerism, Inductive/Electromeric effects, Resonance.", behemoth: true }
                 ],
                 class12: [
                     { name: "Solutions", desc: "Raoult's law, Colligative properties, Van't Hoff factor.", behemoth: false },
-                    { name: "Electrochemistry", desc: "Nernst equation, Kohlrausch's Law, Electrolytic cells.", behemoth: false },
-                    { name: "Chemical Kinetics", desc: "Rate law, Order/Molecularity, Integrated rate equations, Collision theory.", behemoth: false },
-                    { name: "Coordination Compounds", desc: "IUPAC nomenclature, Werner's theory, VBT, Crystal Field Theory.", behemoth: false },
-                    { name: "Aldehydes, Ketones & Acids", desc: "Nucleophilic addition, Alpha hydrogen reactivity, Carboxylic acid acidity.", behemoth: true }
                 ]
             },
             maths: {
                 class11: [
                     { name: "Sets & Functions", desc: "Venn diagrams, Domain/Range of functions, Trigonometric identities.", behemoth: false },
-                    { name: "Algebra", desc: "Complex numbers, Permutations & Combinations, Binomial Theorem, GP.", behemoth: false },
-                    { name: "Coordinate Geometry", desc: "Straight lines (slope-intercept), Conic sections (Circle, Ellipse, Parabola).", behemoth: false }
                 ],
                 class12: [
                     { name: "Calculus", desc: "Continuity, Chain rule, Maxima/Minima, Integration by parts, Definite integrals.", behemoth: true },
-                    { name: "Vectors & 3D", desc: "Scalar/Vector products, Direction cosines, Shortest distance between lines.", behemoth: true },
-                    { name: "Probability", desc: "Conditional probability, Bayes' theorem, Random variables.", behemoth: false }
                 ]
             },
             cs: {
                 class12: [
                     { name: "Computational Thinking-2", desc: "Python Revision, Functions, Exception Handling, Text/CSV/Binary File handling.", behemoth: true },
-                    { name: "Computer Networks", desc: "Topologies, Protocols (HTTP, TCP/IP), Network Devices (Routers, Switches).", behemoth: false },
-                    { name: "Database Management", desc: "SQL Commands (DDL/DML), Joins, Aggregate functions, Python-SQL Interface.", behemoth: true }
                 ]
             },
             english: {
                 class12: [
                     { name: "Literature (Flamingo/Vistas)", desc: "Chapter summaries and theme analysis for all prose and poetry.", behemoth: false },
-                    { name: "Writing Skills", desc: "Format for Formal Invitations, Letters to Editor, Article writing.", behemoth: false }
                 ]
             }
         };
+
+        // ==========================================
+        // DEBUG FUNCTION
+        // ==========================================
+        function updateDebugInfo() {
+            const debugEl = document.getElementById('debugInfo');
+            const chaptersContainer = document.getElementById('chaptersContainer');
+            const hasContent = chaptersContainer && chaptersContainer.children.length > 0;
+            
+            if (debugEl) {
+                debugEl.textContent = `Debug: Current Subject = ${currentSubject} | User = ${currentUser || 'None'} | Chapters in DOM = ${hasContent ? 'YES' : 'NO'} | Chapters Data Exists = ${CHAPTERS[currentSubject] ? 'YES' : 'NO'}`;
+            }
+            console.log('=== DEBUG INFO ===');
+            console.log('Current Subject:', currentSubject);
+            console.log('Current User:', currentUser);
+            console.log('Chapters for subject:', CHAPTERS[currentSubject]);
+            console.log('==================');
+        }
 
         // ==========================================
         // FIREBASE SYNC FUNCTIONS
@@ -812,7 +818,7 @@
 
                 console.log('✅ Data synced to Firebase:', gameData);
                 updateSyncStatus(true, 'saved');
-                
+
                 // Also save to localStorage as backup
                 saveToLocalStorage();
             } catch (error) {
@@ -842,7 +848,7 @@
                 if (snapshot.exists()) {
                     gameData = snapshot.val();
                     console.log('✅ Data loaded from Firebase:', gameData);
-                    
+
                     // Ensure both users exist
                     if (!gameData.partnerA) {
                         gameData.partnerA = { xp: 0, level: 1, tasks: {} };
@@ -860,7 +866,7 @@
                 }
 
                 updateSyncStatus(true, 'saved');
-                
+
                 // Save to localStorage as backup
                 saveToLocalStorage();
             } catch (error) {
@@ -876,20 +882,20 @@
             if (!isFirebaseConnected) return;
 
             const dbRef = ref(database, 'studyRPG/gameData');
-            
+
             dataListener = onValue(dbRef, (snapshot) => {
                 if (snapshot.exists() && !isSyncing) {
                     const newData = snapshot.val();
-                    
+
                     // Only update if data actually changed
                     if (JSON.stringify(newData) !== JSON.stringify(gameData)) {
                         console.log('🔄 Real-time update received from Firebase');
                         gameData = newData;
-                        
+
                         // Update UI
                         updateDashboard();
                         loadChapters(); // Reload chapters to reflect task states
-                        
+
                         updateSyncStatus(true, 'saved');
                     }
                 }
@@ -904,8 +910,6 @@
         // Remove listener on logout
         function removeRealtimeListener() {
             if (dataListener) {
-                // Note: With modular SDK, we don't need to explicitly unsubscribe
-                // as the listener is garbage collected
                 dataListener = null;
                 console.log('🔌 Real-time listener removed');
             }
@@ -965,7 +969,7 @@
                     if (statusApp) {
                         statusApp.className = 'sync-status online';
                         statusApp.textContent = '✅ Synced with Cloud';
-                        
+
                         // Flash sync indicator
                         setTimeout(() => {
                             if (statusApp) {
@@ -1053,9 +1057,15 @@
 
         // Initialize
         async function init() {
+            console.log('🚀 Initializing app...');
             await loadFromFirebase();
             setupRealtimeListener();
             updateDashboard();
+            
+            // IMPORTANT: Load chapters immediately after login
+            console.log('📚 Loading initial chapters...');
+            loadChapters();
+            updateDebugInfo();
         }
 
         // Login
@@ -1066,10 +1076,10 @@
 
             if (USERS[username] && USERS[username].password === password) {
                 currentUser = username;
+                console.log('✅ User logged in:', currentUser);
                 document.getElementById('loginContainer').style.display = 'none';
                 document.getElementById('appContainer').classList.add('active');
                 await init();
-                loadChapters();
             } else {
                 alert('Invalid username or password!');
             }
@@ -1087,6 +1097,7 @@
 
         // Show Subject - FIXED VERSION
         window.showSubject = function(subject) {
+            console.log('📖 Switching to subject:', subject);
             currentSubject = subject;
 
             // Update active tab
@@ -1099,23 +1110,41 @@
             });
 
             loadChapters();
+            updateDebugInfo();
         }
 
-        // Add event listeners to subject tabs
-        document.addEventListener('DOMContentLoaded', function() {
+        // Setup subject tab click handlers
+        function setupSubjectTabs() {
+            console.log('🎯 Setting up subject tab click handlers...');
             const subjectTabs = document.querySelectorAll('.subject-tab');
             subjectTabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const subject = this.getAttribute('data-subject');
+                const subject = tab.getAttribute('data-subject');
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('🖱️ Subject tab clicked:', subject);
                     showSubject(subject);
                 });
             });
-        });
+            console.log('✅ Subject tabs setup complete. Total tabs:', subjectTabs.length);
+        }
 
         // Load Chapters
         function loadChapters() {
+            console.log('📚 Loading chapters for subject:', currentSubject);
             const container = document.getElementById('chaptersContainer');
+            
+            if (!container) {
+                console.error('❌ Chapters container not found!');
+                return;
+            }
+
             const subjectData = CHAPTERS[currentSubject];
+            
+            if (!subjectData) {
+                console.error('❌ No data found for subject:', currentSubject);
+                container.innerHTML = '<p style="text-align: center; color: #ef4444;">No chapters found for this subject.</p>';
+                return;
+            }
 
             let html = '';
 
@@ -1133,6 +1162,7 @@
             }
 
             container.innerHTML = html;
+            console.log('✅ Chapters loaded successfully. HTML length:', html.length);
         }
 
         // Render Chapter
@@ -1184,12 +1214,16 @@
             const content = document.getElementById('content_' + chapterId);
             const toggle = document.getElementById('toggle_' + chapterId);
 
-            content.classList.toggle('open');
-            toggle.classList.toggle('open');
+            if (content && toggle) {
+                content.classList.toggle('open');
+                toggle.classList.toggle('open');
+                console.log('📂 Toggled chapter:', chapterId);
+            }
         }
 
         // Toggle Task
         window.toggleTask = async function(taskId, xp) {
+            console.log('✅ Task toggled:', taskId, 'XP:', xp);
             const checkbox = document.getElementById(taskId);
             const oldLevel = calculateLevel(gameData[currentUser].xp);
 
@@ -1228,11 +1262,14 @@
 
         // Check Firebase status on load
         window.addEventListener('load', () => {
+            console.log('🌐 Page loaded');
             if (!isFirebaseConnected) {
                 updateSyncStatus(false, 'error');
             } else {
                 updateSyncStatus(true, 'saved');
             }
+            // Setup subject tabs
+            setupSubjectTabs();
         });
 
         // Make functions globally accessible
