@@ -518,40 +518,13 @@
         .hidden {
             display: none;
         }
-
-        .firebase-setup-notice {
-            background: rgba(251, 191, 36, 0.2);
-            border: 2px solid #fbbf24;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .firebase-setup-notice strong {
-            color: #fbbf24;
-        }
-
-        .firebase-setup-notice code {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-        }
     </style>
 </head>
 <body>
     <!-- Login Screen -->
     <div id="loginContainer" class="login-container">
         <h1>🎮 Study RPG Tracker</h1>
-        
-        <div class="firebase-setup-notice">
-            <strong>🔧 Firebase Setup Required</strong><br>
-            Please configure your Firebase credentials in the script section below (search for <code>firebaseConfig</code>).
-        </div>
-
-        <div id="syncStatus" class="sync-status offline">🔄 Connecting to Firebase...</div>
+        <div id="syncStatus" class="sync-status online">💾 Auto-Save Enabled</div>
         <form id="loginForm">
             <div class="form-group">
                 <label for="username">Username</label>
@@ -577,7 +550,7 @@
         </div>
 
         <div id="syncStatusApp" class="sync-status online" style="max-width: 300px; margin: 0 auto 20px;">
-            ☁️ Synced with Firebase
+            💾 Progress Auto-Saved
         </div>
 
         <!-- Dashboard -->
@@ -641,42 +614,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-        import { getDatabase, ref, set, onValue, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
-
-        // ========================================
-        // FIREBASE CONFIGURATION
-        // ========================================
-        // TODO: Replace with your Firebase project credentials
-        // Get these from: Firebase Console > Project Settings > Your apps > Firebase SDK snippet
-        const firebaseConfig = {
-            apiKey: "AIzaSyDHG1ljhZ30Z5VsTtOFloBZllv0mZlT2u4",
-            authDomain: "dataprog-78753.firebaseapp.com",
-            databaseURL: "https://dataprog-78753-default-rtdb.firebaseio.com",
-            projectId: "dataprog-78753",
-            storageBucket: "dataprog-78753.firebasestorage.app",
-            messagingSenderId: "120780406858",
-            appId: "1:120780406858:web:5fe30bea2b30815aa5e6b3"
-        };
-
-        // Initialize Firebase
-        let app, database;
-        let firebaseInitialized = false;
-
-        try {
-            app = initializeApp(firebaseConfig);
-            database = getDatabase(app);
-            firebaseInitialized = true;
-            console.log('Firebase initialized successfully');
-            updateSyncStatus(true, 'connected');
-        } catch (error) {
-            console.error('Firebase initialization error:', error);
-            updateSyncStatus(false, 'error');
-            alert('Firebase configuration needed. Please add your Firebase credentials in the code.');
-        }
-
+    <script>
         // XP Level Thresholds (Level 1-20)
         const XP_LEVELS = [
             0, 300, 750, 1500, 2500, 4000, 6000, 8500, 11500, 15000,
@@ -709,9 +647,8 @@
         // Current subject
         let currentSubject = 'physics';
 
-        // Prevent duplicate level-up notifications
-        let lastLevelA = 1;
-        let lastLevelB = 1;
+        // Storage key
+        const STORAGE_KEY = 'studyRPG_SharedData_v1';
 
         // Chapter Data
         const CHAPTERS = {
@@ -786,114 +723,79 @@
             }
         };
 
-        // Firebase Functions
-        window.saveGameDataToFirebase = function() {
-            if (!firebaseInitialized) {
-                console.warn('Firebase not initialized, skipping save');
-                return;
-            }
-
+        // Save/Load Game Data with improved localStorage
+        function saveGameData() {
             try {
-                const gameRef = ref(database, 'gameData');
-                set(gameRef, gameData);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData));
                 updateSyncStatus(true, 'saved');
-                console.log('Data synced to Firebase:', gameData);
+                console.log('Data saved successfully:', gameData);
             } catch (error) {
-                console.error('Error saving to Firebase:', error);
+                console.error('Error saving data:', error);
                 updateSyncStatus(false, 'error');
             }
-        };
+        }
 
-        window.loadGameDataFromFirebase = function() {
-            if (!firebaseInitialized) {
-                console.warn('Firebase not initialized, using default data');
-                return;
-            }
-
-            const gameRef = ref(database, 'gameData');
-            
-            onValue(gameRef, (snapshot) => {
-                const data = snapshot.val();
-                if (data && data.partnerA && data.partnerB) {
-                    const previousLevelA = calculateLevel(gameData.partnerA.xp);
-                    const previousLevelB = calculateLevel(gameData.partnerB.xp);
-                    
-                    gameData = data;
-                    
-                    const newLevelA = calculateLevel(gameData.partnerA.xp);
-                    const newLevelB = calculateLevel(gameData.partnerB.xp);
-                    
-                    // Show level up animation only for the current user and only if it's a new level
-                    if (currentUser === 'partnerA' && newLevelA > lastLevelA) {
-                        showLevelUp(newLevelA);
-                        lastLevelA = newLevelA;
+        function loadGameData() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsedData = JSON.parse(saved);
+                    // Ensure both users exist
+                    if (parsedData.partnerA && parsedData.partnerB) {
+                        gameData = parsedData;
+                        console.log('Data loaded successfully:', gameData);
+                    } else {
+                        console.log('Incomplete data, using defaults');
+                        saveGameData(); // Save default structure
                     }
-                    if (currentUser === 'partnerB' && newLevelB > lastLevelB) {
-                        showLevelUp(newLevelB);
-                        lastLevelB = newLevelB;
-                    }
-                    
-                    updateDashboard();
-                    if (currentSubject) {
-                        loadChapters();
-                    }
-                    updateSyncStatus(true, 'synced');
-                    console.log('Data loaded from Firebase:', gameData);
                 } else {
-                    console.log('No data in Firebase, initializing...');
-                    saveGameDataToFirebase();
+                    console.log('No saved data found, using defaults');
+                    saveGameData(); // Save default structure
                 }
-            }, (error) => {
-                console.error('Error loading from Firebase:', error);
-                updateSyncStatus(false, 'error');
-            });
-        };
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
 
-        window.updateSyncStatus = function(success, type = 'saved') {
+        function updateSyncStatus(success, type = 'saved') {
             const statusLogin = document.getElementById('syncStatus');
             const statusApp = document.getElementById('syncStatusApp');
 
             if (success) {
-                if (type === 'connected') {
+                if (type === 'saved') {
                     if (statusLogin) {
                         statusLogin.className = 'sync-status online';
-                        statusLogin.textContent = '☁️ Connected to Firebase';
+                        statusLogin.textContent = '💾 Auto-Save Enabled';
                     }
-                } else if (type === 'saved') {
-                    if (statusApp) {
-                        statusApp.className = 'sync-status syncing';
-                        statusApp.textContent = '🔄 Syncing...';
-                        
-                        setTimeout(() => {
-                            if (statusApp) {
-                                statusApp.className = 'sync-status online';
-                                statusApp.textContent = '☁️ Synced with Firebase';
-                            }
-                        }, 1000);
-                    }
-                } else if (type === 'synced') {
                     if (statusApp) {
                         statusApp.className = 'sync-status online';
-                        statusApp.textContent = '☁️ Synced with Firebase';
+                        statusApp.textContent = '✅ Progress Auto-Saved';
+                        
+                        // Flash sync indicator
+                        setTimeout(() => {
+                            if (statusApp) {
+                                statusApp.textContent = '💾 Progress Auto-Saved';
+                            }
+                        }, 2000);
                     }
                 }
             } else {
                 if (statusLogin) {
                     statusLogin.className = 'sync-status offline';
-                    statusLogin.textContent = '⚠️ Firebase Connection Error';
+                    statusLogin.textContent = '⚠️ Save Error';
                 }
                 if (statusApp) {
                     statusApp.className = 'sync-status offline';
-                    statusApp.textContent = '⚠️ Sync Error';
+                    statusApp.textContent = '⚠️ Save Error';
                 }
             }
-        };
+        }
 
         // Initialize
-        window.init = function() {
-            loadGameDataFromFirebase();
+        function init() {
+            loadGameData();
             updateDashboard();
-        };
+        }
 
         // Login
         document.getElementById('loginForm').addEventListener('submit', function(e) {
@@ -903,9 +805,6 @@
 
             if (USERS[username] && USERS[username].password === password) {
                 currentUser = username;
-                lastLevelA = calculateLevel(gameData.partnerA.xp);
-                lastLevelB = calculateLevel(gameData.partnerB.xp);
-                
                 document.getElementById('loginContainer').style.display = 'none';
                 document.getElementById('appContainer').classList.add('active');
                 init();
@@ -916,32 +815,32 @@
         });
 
         // Logout
-        window.logout = function() {
+        function logout() {
             currentUser = null;
             document.getElementById('loginContainer').style.display = 'block';
             document.getElementById('appContainer').classList.remove('active');
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
-        };
+        }
 
         // Calculate Level from XP
-        window.calculateLevel = function(xp) {
+        function calculateLevel(xp) {
             for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
                 if (xp >= XP_LEVELS[i]) {
                     return i + 1;
                 }
             }
             return 1;
-        };
+        }
 
         // Get XP needed for next level
-        window.getXPForNextLevel = function(level) {
+        function getXPForNextLevel(level) {
             if (level >= 20) return XP_LEVELS[18];
             return XP_LEVELS[level];
-        };
+        }
 
         // Update Dashboard
-        window.updateDashboard = function() {
+        function updateDashboard() {
             // Update Partner A
             const levelA = calculateLevel(gameData.partnerA.xp);
             const xpA = gameData.partnerA.xp;
@@ -987,10 +886,10 @@
             } else {
                 leaderText.textContent = 'Both players are tied!';
             }
-        };
+        }
 
         // Show Subject
-        window.showSubject = function(subject) {
+        function showSubject(subject) {
             currentSubject = subject;
 
             // Update active tab
@@ -999,10 +898,10 @@
             event.target.classList.add('active');
 
             loadChapters();
-        };
+        }
 
         // Load Chapters
-        window.loadChapters = function() {
+        function loadChapters() {
             const container = document.getElementById('chaptersContainer');
             const subjectData = CHAPTERS[currentSubject];
 
@@ -1022,10 +921,10 @@
             }
 
             container.innerHTML = html;
-        };
+        }
 
         // Render Chapter
-        window.renderChapter = function(chapter, chapterId) {
+        function renderChapter(chapter, chapterId) {
             const behemothBadge = chapter.behemoth ? '<span class="behemoth-badge">BEHEMOTH 1.5x</span>' : '';
 
             return `
@@ -1048,10 +947,10 @@
                     </div>
                 </div>
             `;
-        };
+        }
 
         // Render Task
-        window.renderTask = function(chapterId, taskType, taskName, behemoth) {
+        function renderTask(chapterId, taskType, taskName, behemoth) {
             const xp = TASK_XP[taskType];
             const multipliedXP = behemoth ? Math.floor(xp * 1.5) : xp;
             const taskId = `${chapterId}_${taskType}`;
@@ -1066,19 +965,19 @@
                     <div class="task-xp">+${multipliedXP} XP</div>
                 </div>
             `;
-        };
+        }
 
         // Toggle Chapter
-        window.toggleChapter = function(chapterId) {
+        function toggleChapter(chapterId) {
             const content = document.getElementById('content_' + chapterId);
             const toggle = document.getElementById('toggle_' + chapterId);
 
             content.classList.toggle('open');
             toggle.classList.toggle('open');
-        };
+        }
 
         // Toggle Task
-        window.toggleTask = function(taskId, xp) {
+        function toggleTask(taskId, xp) {
             const checkbox = document.getElementById(taskId);
             const oldLevel = calculateLevel(gameData[currentUser].xp);
 
@@ -1092,24 +991,17 @@
 
             const newLevel = calculateLevel(gameData[currentUser].xp);
 
-            // Update last level tracker
-            if (currentUser === 'partnerA') {
-                lastLevelA = newLevel;
-            } else {
-                lastLevelB = newLevel;
-            }
-
             // Check for level up
             if (newLevel > oldLevel) {
                 showLevelUp(newLevel);
             }
 
-            saveGameDataToFirebase();
+            saveGameData();
             updateDashboard();
-        };
+        }
 
         // Show Level Up Animation
-        window.showLevelUp = function(level) {
+        function showLevelUp(level) {
             const overlay = document.getElementById('levelUpOverlay');
             const levelNumber = document.getElementById('levelUpNumber');
 
@@ -1119,7 +1011,14 @@
             setTimeout(() => {
                 overlay.classList.remove('show');
             }, 3000);
-        };
+        }
+
+        // Auto-save every 30 seconds as backup
+        setInterval(() => {
+            if (currentUser) {
+                saveGameData();
+            }
+        }, 30000);
     </script>
 </body>
 </html>
