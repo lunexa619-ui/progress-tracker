@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study RPG Syllabus Tracker - FIXED</title>
+    <title>Study RPG Syllabus Tracker</title>
     <style>
         * {
             margin: 0;
@@ -515,28 +515,8 @@
             }
         }
 
-        .setup-notice {
-            background: rgba(251, 191, 36, 0.1);
-            border: 2px solid #fbbf24;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            color: #fbbf24;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .setup-notice strong {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 16px;
-        }
-
-        .setup-notice code {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
+        .hidden {
+            display: none;
         }
     </style>
 </head>
@@ -544,17 +524,7 @@
     <!-- Login Screen -->
     <div id="loginContainer" class="login-container">
         <h1>🎮 Study RPG Tracker</h1>
-
-        <div class="setup-notice">
-            <strong>⚠️ Firebase Setup Required</strong>
-            Before using this app, you need to:
-            <br>1. Create a Firebase project at <code>firebase.google.com</code>
-            <br>2. Enable Realtime Database
-            <br>3. Replace the Firebase config in the code
-            <br>4. Set database rules to allow read/write for testing
-        </div>
-
-        <div id="syncStatus" class="sync-status offline">🔌 Connecting to Firebase...</div>
+        <div id="syncStatus" class="sync-status online">💾 Auto-Save Enabled</div>
         <form id="loginForm">
             <div class="form-group">
                 <label for="username">Username</label>
@@ -576,11 +546,11 @@
     <div id="appContainer" class="app-container">
         <div class="header">
             <h1>🎮 Study RPG Syllabus Tracker</h1>
-            <button class="logout-btn" id="logoutBtn">Logout</button>
+            <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
 
         <div id="syncStatusApp" class="sync-status online" style="max-width: 300px; margin: 0 auto 20px;">
-            ☁️ Synced with Cloud
+            💾 Progress Auto-Saved
         </div>
 
         <!-- Dashboard -->
@@ -622,17 +592,17 @@
         </div>
 
         <!-- Subject Tabs -->
-        <div class="subjects-container" id="subjectsContainer">
-            <div class="subject-tab active" data-subject="physics">⚛️ Physics</div>
-            <div class="subject-tab" data-subject="chemistry">🧪 Chemistry</div>
-            <div class="subject-tab" data-subject="maths">📐 Mathematics</div>
-            <div class="subject-tab" data-subject="cs">💻 Computer Science</div>
-            <div class="subject-tab" data-subject="english">📚 English</div>
+        <div class="subjects-container">
+            <div class="subject-tab active" onclick="showSubject('physics')">⚛️ Physics</div>
+            <div class="subject-tab" onclick="showSubject('chemistry')">🧪 Chemistry</div>
+            <div class="subject-tab" onclick="showSubject('maths')">📐 Mathematics</div>
+            <div class="subject-tab" onclick="showSubject('cs')">💻 Computer Science</div>
+            <div class="subject-tab" onclick="showSubject('english')">📚 English</div>
         </div>
 
         <!-- Chapters Container -->
         <div id="chaptersContainer" class="chapters-container">
-            <!-- Chapters will be loaded here -->
+            <!-- Chapters will be dynamically loaded here -->
         </div>
     </div>
 
@@ -644,52 +614,41 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-        import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+    <script>
+        // XP Level Thresholds (Level 1-20)
+        const XP_LEVELS = [
+            0, 300, 750, 1500, 2500, 4000, 6000, 8500, 11500, 15000,
+            19000, 24000, 30000, 37000, 45000, 54000, 64000, 75000, 85000
+        ];
 
-        // Firebase Config
-        const firebaseConfig = {
-            apiKey: "AIzaSyBKVn0xyx9_bqKn1PGAD73sFINujJuDwVk",
-            authDomain: "final-482a4.firebaseapp.com",
-            databaseURL: "https://final-482a4-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "final-482a4",
-            storageBucket: "final-482a4.firebasestorage.app",
-            messagingSenderId: "194266232103",
-            appId: "1:194266232103:web:0cdab418b15d0341a92502"
+        // Task XP Values
+        const TASK_XP = {
+            concept: 10,
+            ncert: 30,
+            pyq: 50,
+            legend: 100
         };
 
-        // Initialize Firebase
-        let app, database, isFirebaseConnected = false;
-
-        try {
-            app = initializeApp(firebaseConfig);
-            database = getDatabase(app);
-            isFirebaseConnected = true;
-            console.log('✅ Firebase initialized');
-        } catch (error) {
-            console.error('❌ Firebase error:', error);
-        }
-
-        // Constants
-        const XP_LEVELS = [0, 300, 750, 1500, 2500, 4000, 6000, 8500, 11500, 15000, 19000, 24000, 30000, 37000, 45000, 54000, 64000, 75000, 85000];
-        const TASK_XP = { concept: 10, ncert: 30, pyq: 50, legend: 100 };
+        // User Credentials
         const USERS = {
             partnerA: { password: 'study123', name: 'Partner A' },
-            partnerB: { password: 'terimkc', name: 'Partner B' }
+            partnerB: { password: 'study123', name: 'Partner B' }
         };
-        const STORAGE_KEY = 'studyRPG_SharedData_v1';
 
-        // State
-        const state = {
-            currentUser: null,
-            currentSubject: 'physics',
-            gameData: {
-                partnerA: { xp: 0, level: 1, tasks: {} },
-                partnerB: { xp: 0, level: 1, tasks: {} }
-            },
-            isSyncing: false
+        // Current logged-in user
+        let currentUser = null;
+
+        // Game State
+        let gameData = {
+            partnerA: { xp: 0, level: 1, tasks: {} },
+            partnerB: { xp: 0, level: 1, tasks: {} }
         };
+
+        // Current subject
+        let currentSubject = 'physics';
+
+        // Storage key
+        const STORAGE_KEY = 'studyRPG_SharedData_v1';
 
         // Chapter Data
         const CHAPTERS = {
@@ -700,39 +659,60 @@
                     { name: "Motion in a Plane", desc: "Scalar/Vector products, Projectile motion, Uniform circular motion.", behemoth: false },
                     { name: "Laws of Motion", desc: "Newton's Laws, Conservation of momentum, Equilibrium of forces, Friction, Centripetal force.", behemoth: false },
                     { name: "Work, Energy, and Power", desc: "Work-energy theorem, Potential energy of a spring, Conservative forces, Collisions.", behemoth: false },
-                    { name: "Rotational Motion", desc: "Center of mass, Torque, Angular momentum, Moment of inertia, Radius of gyration.", behemoth: true }
+                    { name: "Rotational Motion", desc: "Center of mass, Torque, Angular momentum, Moment of inertia, Radius of gyration.", behemoth: true },
+                    { name: "Gravitation", desc: "Kepler's laws, Universal law of gravitation, Acceleration due to gravity (g), Escape velocity.", behemoth: false },
+                    { name: "Mechanical Properties of Solids", desc: "Stress-strain relationship, Hooke's law, Young's modulus.", behemoth: false },
+                    { name: "Mechanical Properties of Fluids", desc: "Pascal's law, Viscosity, Bernoulli's theorem, Surface tension.", behemoth: false },
+                    { name: "Thermodynamics", desc: "Zeroth, First, and Second laws, Isothermal and adiabatic processes.", behemoth: false },
+                    { name: "Kinetic Theory", desc: "Equation of state of a perfect gas, Degrees of freedom, Specific heat capacities.", behemoth: false },
+                    { name: "Oscillations & Waves", desc: "SHM, Resonance, Doppler effect, Speed of traveling waves.", behemoth: false }
                 ],
                 class12: [
                     { name: "Electric Charges & Fields", desc: "Coulomb's law, Electric field lines, Electric dipole, Gauss's theorem.", behemoth: true },
                     { name: "Electrostatic Potential", desc: "Equipotential surfaces, Dielectrics, Capacitors in series/parallel, Energy in capacitor.", behemoth: false },
-                    { name: "Current Electricity", desc: "Ohm's law, V-I characteristics, Kirchhoff's laws, Wheatstone bridge.", behemoth: true }
+                    { name: "Current Electricity", desc: "Ohm's law, V-I characteristics, Kirchhoff's laws, Wheatstone bridge.", behemoth: true },
+                    { name: "Moving Charges & Magnetism", desc: "Biot-Savart law, Ampere's law, Force on a moving charge, Moving coil galvanometer.", behemoth: false },
+                    { name: "Magnetism and Matter", desc: "Bar magnet, Magnetic field lines, Magnetic properties (Dia, Para, Ferro).", behemoth: false },
+                    { name: "Electromagnetic Induction", desc: "Faraday's law, Lenz's Law, Self and mutual induction.", behemoth: false },
+                    { name: "Alternating Current", desc: "LCR series circuit, Resonance, Power in AC circuits, Transformers.", behemoth: false },
+                    { name: "Optics", desc: "Mirror/Lens formula, Total internal reflection, Optical instruments, Huygens principle, Interference.", behemoth: true },
+                    { name: "Modern Physics", desc: "Photoelectric effect, Bohr's model, Mass-energy relation, Nuclear fission/fusion.", behemoth: false },
+                    { name: "Semiconductors", desc: "Energy bands, p-n junction diode, I-V characteristics, Diode as a rectifier.", behemoth: false }
                 ]
             },
             chemistry: {
                 class11: [
                     { name: "Basic Concepts", desc: "Dalton's theory, Mole concept, Stoichiometry.", behemoth: false },
                     { name: "Structure of Atom", desc: "Bohr's model, Quantum numbers, Aufbau principle, Pauli's exclusion.", behemoth: false },
-                    { name: "Chemical Bonding", desc: "VSEPR theory, Hybridization (sp,sp2,sp3,dsp2), Hydrogen bonding.", behemoth: true }
+                    { name: "Chemical Bonding", desc: "VSEPR theory, Hybridization (sp,sp2,sp3,dsp2), Hydrogen bonding.", behemoth: true },
+                    { name: "Equilibrium", desc: "Le Chatelier's principle, pH, Solubility product, Buffer solutions.", behemoth: false },
+                    { name: "Organic Chemistry", desc: "Nomenclature, Isomerism, Inductive/Electromeric effects, Resonance.", behemoth: true }
                 ],
                 class12: [
                     { name: "Solutions", desc: "Raoult's law, Colligative properties, Van't Hoff factor.", behemoth: false },
-                    { name: "Electrochemistry", desc: "Nernst equation, Kohlrausch's Law, Electrolytic cells.", behemoth: false }
+                    { name: "Electrochemistry", desc: "Nernst equation, Kohlrausch's Law, Electrolytic cells.", behemoth: false },
+                    { name: "Chemical Kinetics", desc: "Rate law, Order/Molecularity, Integrated rate equations, Collision theory.", behemoth: false },
+                    { name: "Coordination Compounds", desc: "IUPAC nomenclature, Werner's theory, VBT, Crystal Field Theory.", behemoth: false },
+                    { name: "Aldehydes, Ketones & Acids", desc: "Nucleophilic addition, Alpha hydrogen reactivity, Carboxylic acid acidity.", behemoth: true }
                 ]
             },
             maths: {
                 class11: [
                     { name: "Sets & Functions", desc: "Venn diagrams, Domain/Range of functions, Trigonometric identities.", behemoth: false },
-                    { name: "Algebra", desc: "Complex numbers, Permutations & Combinations, Binomial Theorem, GP.", behemoth: false }
+                    { name: "Algebra", desc: "Complex numbers, Permutations & Combinations, Binomial Theorem, GP.", behemoth: false },
+                    { name: "Coordinate Geometry", desc: "Straight lines (slope-intercept), Conic sections (Circle, Ellipse, Parabola).", behemoth: false }
                 ],
                 class12: [
                     { name: "Calculus", desc: "Continuity, Chain rule, Maxima/Minima, Integration by parts, Definite integrals.", behemoth: true },
-                    { name: "Vectors & 3D", desc: "Scalar/Vector products, Direction cosines, Shortest distance between lines.", behemoth: true }
+                    { name: "Vectors & 3D", desc: "Scalar/Vector products, Direction cosines, Shortest distance between lines.", behemoth: true },
+                    { name: "Probability", desc: "Conditional probability, Bayes' theorem, Random variables.", behemoth: false }
                 ]
             },
             cs: {
                 class12: [
                     { name: "Computational Thinking-2", desc: "Python Revision, Functions, Exception Handling, Text/CSV/Binary File handling.", behemoth: true },
-                    { name: "Computer Networks", desc: "Topologies, Protocols (HTTP, TCP/IP), Network Devices (Routers, Switches).", behemoth: false }
+                    { name: "Computer Networks", desc: "Topologies, Protocols (HTTP, TCP/IP), Network Devices (Routers, Switches).", behemoth: false },
+                    { name: "Database Management", desc: "SQL Commands (DDL/DML), Joins, Aggregate functions, Python-SQL Interface.", behemoth: true }
                 ]
             },
             english: {
@@ -743,102 +723,127 @@
             }
         };
 
-        // Utility Functions
-        function calculateLevel(xp) {
-            for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
-                if (xp >= XP_LEVELS[i]) return i + 1;
-            }
-            return 1;
-        }
-
-        function getXPForNextLevel(level) {
-            return level >= 20 ? XP_LEVELS[18] : XP_LEVELS[level];
-        }
-
-        // Storage Functions
-        function saveToLocalStorage() {
+        // Save/Load Game Data with improved localStorage
+        function saveGameData() {
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(state.gameData));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData));
+                updateSyncStatus(true, 'saved');
+                console.log('Data saved successfully:', gameData);
             } catch (error) {
-                console.error('❌ localStorage save error:', error);
+                console.error('Error saving data:', error);
+                updateSyncStatus(false, 'error');
             }
         }
 
-        function loadFromLocalStorage() {
+        function loadGameData() {
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (saved) {
                     const parsedData = JSON.parse(saved);
+                    // Ensure both users exist
                     if (parsedData.partnerA && parsedData.partnerB) {
-                        state.gameData = parsedData;
+                        gameData = parsedData;
+                        console.log('Data loaded successfully:', gameData);
+                    } else {
+                        console.log('Incomplete data, using defaults');
+                        saveGameData(); // Save default structure
                     }
-                }
-            } catch (error) {
-                console.error('❌ localStorage load error:', error);
-            }
-        }
-
-        // Firebase Functions
-        async function saveToFirebase() {
-            if (!isFirebaseConnected) {
-                saveToLocalStorage();
-                return;
-            }
-            try {
-                state.isSyncing = true;
-                const dbRef = ref(database, 'studyRPG/gameData');
-                await set(dbRef, state.gameData);
-                saveToLocalStorage();
-            } catch (error) {
-                console.error('❌ Firebase save error:', error);
-                saveToLocalStorage();
-            } finally {
-                state.isSyncing = false;
-            }
-        }
-
-        async function loadFromFirebase() {
-            if (!isFirebaseConnected) {
-                loadFromLocalStorage();
-                return;
-            }
-            try {
-                const dbRef = ref(database, 'studyRPG/gameData');
-                const snapshot = await get(dbRef);
-                if (snapshot.exists()) {
-                    state.gameData = snapshot.val();
-                    if (!state.gameData.partnerA) state.gameData.partnerA = { xp: 0, level: 1, tasks: {} };
-                    if (!state.gameData.partnerB) state.gameData.partnerB = { xp: 0, level: 1, tasks: {} };
                 } else {
-                    await saveToFirebase();
+                    console.log('No saved data found, using defaults');
+                    saveGameData(); // Save default structure
                 }
-                saveToLocalStorage();
             } catch (error) {
-                console.error('❌ Firebase load error:', error);
-                loadFromLocalStorage();
+                console.error('Error loading data:', error);
             }
         }
 
-        function setupRealtimeListener() {
-            if (!isFirebaseConnected) return;
-            const dbRef = ref(database, 'studyRPG/gameData');
-            onValue(dbRef, (snapshot) => {
-                if (snapshot.exists() && !state.isSyncing) {
-                    const newData = snapshot.val();
-                    if (JSON.stringify(newData) !== JSON.stringify(state.gameData)) {
-                        state.gameData = newData;
-                        updateDashboard();
-                        loadChapters();
+        function updateSyncStatus(success, type = 'saved') {
+            const statusLogin = document.getElementById('syncStatus');
+            const statusApp = document.getElementById('syncStatusApp');
+
+            if (success) {
+                if (type === 'saved') {
+                    if (statusLogin) {
+                        statusLogin.className = 'sync-status online';
+                        statusLogin.textContent = '💾 Auto-Save Enabled';
+                    }
+                    if (statusApp) {
+                        statusApp.className = 'sync-status online';
+                        statusApp.textContent = '✅ Progress Auto-Saved';
+                        
+                        // Flash sync indicator
+                        setTimeout(() => {
+                            if (statusApp) {
+                                statusApp.textContent = '💾 Progress Auto-Saved';
+                            }
+                        }, 2000);
                     }
                 }
-            });
+            } else {
+                if (statusLogin) {
+                    statusLogin.className = 'sync-status offline';
+                    statusLogin.textContent = '⚠️ Save Error';
+                }
+                if (statusApp) {
+                    statusApp.className = 'sync-status offline';
+                    statusApp.textContent = '⚠️ Save Error';
+                }
+            }
         }
 
-        // UI Functions
+        // Initialize
+        function init() {
+            loadGameData();
+            updateDashboard();
+        }
+
+        // Login
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (USERS[username] && USERS[username].password === password) {
+                currentUser = username;
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('appContainer').classList.add('active');
+                init();
+                loadChapters();
+            } else {
+                alert('Invalid username or password!');
+            }
+        });
+
+        // Logout
+        function logout() {
+            currentUser = null;
+            document.getElementById('loginContainer').style.display = 'block';
+            document.getElementById('appContainer').classList.remove('active');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        // Calculate Level from XP
+        function calculateLevel(xp) {
+            for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
+                if (xp >= XP_LEVELS[i]) {
+                    return i + 1;
+                }
+            }
+            return 1;
+        }
+
+        // Get XP needed for next level
+        function getXPForNextLevel(level) {
+            if (level >= 20) return XP_LEVELS[18];
+            return XP_LEVELS[level];
+        }
+
+        // Update Dashboard
         function updateDashboard() {
             // Update Partner A
-            const levelA = calculateLevel(state.gameData.partnerA.xp);
-            const xpA = state.gameData.partnerA.xp;
+            const levelA = calculateLevel(gameData.partnerA.xp);
+            const xpA = gameData.partnerA.xp;
             const nextLevelA = getXPForNextLevel(levelA);
             const prevLevelA = levelA > 1 ? XP_LEVELS[levelA - 1] : 0;
             const progressA = ((xpA - prevLevelA) / (nextLevelA - prevLevelA)) * 100;
@@ -848,8 +853,8 @@
             document.getElementById('xpTextA').textContent = `${xpA} / ${nextLevelA} XP`;
 
             // Update Partner B
-            const levelB = calculateLevel(state.gameData.partnerB.xp);
-            const xpB = state.gameData.partnerB.xp;
+            const levelB = calculateLevel(gameData.partnerB.xp);
+            const xpB = gameData.partnerB.xp;
             const nextLevelB = getXPForNextLevel(levelB);
             const prevLevelB = levelB > 1 ? XP_LEVELS[levelB - 1] : 0;
             const progressB = ((xpB - prevLevelB) / (nextLevelB - prevLevelB)) * 100;
@@ -883,34 +888,52 @@
             }
         }
 
+        // Show Subject
+        function showSubject(subject) {
+            currentSubject = subject;
+
+            // Update active tab
+            const tabs = document.querySelectorAll('.subject-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            loadChapters();
+        }
+
+        // Load Chapters
         function loadChapters() {
             const container = document.getElementById('chaptersContainer');
-            const subjectData = CHAPTERS[state.currentSubject];
-
-            if (!subjectData) {
-                container.innerHTML = '<p style="text-align: center; color: #ef4444;">No chapters found.</p>';
-                return;
-            }
+            const subjectData = CHAPTERS[currentSubject];
 
             let html = '';
+
             for (const [className, chapters] of Object.entries(subjectData)) {
                 const classTitle = className === 'class11' ? 'Class 11' : 'Class 12';
-                html += `<div class="class-section"><h2 class="class-header">${classTitle}</h2>`;
+                html += `<div class="class-section">
+                    <h2 class="class-header">${classTitle}</h2>`;
+
                 chapters.forEach((chapter, index) => {
-                    const chapterId = `${state.currentSubject}_${className}_${index}`;
+                    const chapterId = `${currentSubject}_${className}_${index}`;
                     html += renderChapter(chapter, chapterId);
                 });
+
                 html += '</div>';
             }
+
             container.innerHTML = html;
         }
 
+        // Render Chapter
         function renderChapter(chapter, chapterId) {
             const behemothBadge = chapter.behemoth ? '<span class="behemoth-badge">BEHEMOTH 1.5x</span>' : '';
+
             return `
                 <div class="chapter-item">
-                    <div class="chapter-header" onclick="window.toggleChapter('${chapterId}')">
-                        <div class="chapter-title">${behemothBadge}${chapter.name}</div>
+                    <div class="chapter-header" onclick="toggleChapter('${chapterId}')">
+                        <div class="chapter-title">
+                            ${behemothBadge}
+                            ${chapter.name}
+                        </div>
                         <div class="chapter-toggle" id="toggle_${chapterId}">▼</div>
                     </div>
                     <div class="chapter-content" id="content_${chapterId}">
@@ -926,15 +949,17 @@
             `;
         }
 
+        // Render Task
         function renderTask(chapterId, taskType, taskName, behemoth) {
             const xp = TASK_XP[taskType];
             const multipliedXP = behemoth ? Math.floor(xp * 1.5) : xp;
             const taskId = `${chapterId}_${taskType}`;
-            const checked = state.gameData[state.currentUser]?.tasks[taskId] ? 'checked' : '';
+            const checked = gameData[currentUser]?.tasks[taskId] ? 'checked' : '';
+
             return `
                 <div class="task-item">
                     <div class="task-checkbox">
-                        <input type="checkbox" id="${taskId}" ${checked} onchange="window.toggleTask('${taskId}', ${multipliedXP})">
+                        <input type="checkbox" id="${taskId}" ${checked} onchange="toggleTask('${taskId}', ${multipliedXP})">
                         <label for="${taskId}">${taskName}</label>
                     </div>
                     <div class="task-xp">+${multipliedXP} XP</div>
@@ -942,88 +967,58 @@
             `;
         }
 
-        function showSubject(subject) {
-            state.currentSubject = subject;
-            const tabs = document.querySelectorAll('.subject-tab');
-            tabs.forEach(tab => {
-                tab.classList.remove('active');
-                if (tab.getAttribute('data-subject') === subject) {
-                    tab.classList.add('active');
-                }
-            });
-            loadChapters();
-        }
-
-        // Global Functions
-        window.toggleChapter = function(chapterId) {
+        // Toggle Chapter
+        function toggleChapter(chapterId) {
             const content = document.getElementById('content_' + chapterId);
             const toggle = document.getElementById('toggle_' + chapterId);
-            if (content && toggle) {
-                content.classList.toggle('open');
-                toggle.classList.toggle('open');
-            }
-        };
 
-        window.toggleTask = async function(taskId, xp) {
+            content.classList.toggle('open');
+            toggle.classList.toggle('open');
+        }
+
+        // Toggle Task
+        function toggleTask(taskId, xp) {
             const checkbox = document.getElementById(taskId);
-            const oldLevel = calculateLevel(state.gameData[state.currentUser].xp);
+            const oldLevel = calculateLevel(gameData[currentUser].xp);
 
             if (checkbox.checked) {
-                state.gameData[state.currentUser].tasks[taskId] = true;
-                state.gameData[state.currentUser].xp += xp;
+                gameData[currentUser].tasks[taskId] = true;
+                gameData[currentUser].xp += xp;
             } else {
-                delete state.gameData[state.currentUser].tasks[taskId];
-                state.gameData[state.currentUser].xp -= xp;
+                delete gameData[currentUser].tasks[taskId];
+                gameData[currentUser].xp -= xp;
             }
 
-            const newLevel = calculateLevel(state.gameData[state.currentUser].xp);
+            const newLevel = calculateLevel(gameData[currentUser].xp);
+
+            // Check for level up
             if (newLevel > oldLevel) {
-                const overlay = document.getElementById('levelUpOverlay');
-                const levelNumber = document.getElementById('levelUpNumber');
-                levelNumber.textContent = newLevel;
-                overlay.classList.add('show');
-                setTimeout(() => overlay.classList.remove('show'), 3000);
+                showLevelUp(newLevel);
             }
 
-            await saveToFirebase();
+            saveGameData();
             updateDashboard();
-        };
+        }
 
-        // Event Listeners
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+        // Show Level Up Animation
+        function showLevelUp(level) {
+            const overlay = document.getElementById('levelUpOverlay');
+            const levelNumber = document.getElementById('levelUpNumber');
 
-            if (USERS[username] && USERS[username].password === password) {
-                state.currentUser = username;
-                document.getElementById('loginContainer').style.display = 'none';
-                document.getElementById('appContainer').classList.add('active');
+            levelNumber.textContent = level;
+            overlay.classList.add('show');
 
-                await loadFromFirebase();
-                setupRealtimeListener();
-                updateDashboard();
-                loadChapters();
-            } else {
-                alert('Invalid username or password!');
+            setTimeout(() => {
+                overlay.classList.remove('show');
+            }, 3000);
+        }
+
+        // Auto-save every 30 seconds as backup
+        setInterval(() => {
+            if (currentUser) {
+                saveGameData();
             }
-        });
-
-        document.getElementById('logoutBtn').addEventListener('click', function() {
-            state.currentUser = null;
-            document.getElementById('loginContainer').style.display = 'block';
-            document.getElementById('appContainer').classList.remove('active');
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-        });
-
-        // Subject tabs
-        document.querySelectorAll('.subject-tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                const subject = this.getAttribute('data-subject');
-                showSubject(subject);
-            });
-        });
+        }, 30000);
     </script>
 </body>
 </html>
