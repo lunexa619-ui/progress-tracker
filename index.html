@@ -1,1228 +1,273 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study RPG Syllabus Tracker</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 100%);
-            color: #e0e0e0;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        /* Login Screen */
-        .login-container {
-            max-width: 400px;
-            margin: 100px auto;
-            background: rgba(30, 30, 50, 0.95);
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            border: 2px solid #4a5568;
-        }
-
-        .login-container h1 {
-            text-align: center;
-            color: #fbbf24;
-            margin-bottom: 30px;
-            font-size: 28px;
-            text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
-        }
-
-        .sync-status {
-            text-align: center;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .sync-status.online {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-            border: 1px solid #22c55e;
-        }
-
-        .sync-status.offline {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 1px solid #ef4444;
-        }
-
-        .sync-status.syncing {
-            background: rgba(251, 191, 36, 0.2);
-            color: #fbbf24;
-            border: 1px solid #fbbf24;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #a0aec0;
-            font-weight: 600;
-        }
-
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 12px;
-            background: rgba(20, 20, 35, 0.8);
-            border: 2px solid #4a5568;
-            border-radius: 8px;
-            color: #e0e0e0;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: #fbbf24;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-            border: none;
-            border-radius: 8px;
-            color: #1a1a2e;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(251, 191, 36, 0.4);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        /* Main App */
-        .app-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: none;
-        }
-
-        .app-container.active {
-            display: block;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            position: relative;
-        }
-
-        .header h1 {
-            font-size: 36px;
-            color: #fbbf24;
-            text-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
-            margin-bottom: 10px;
-        }
-
-        .logout-btn {
-            position: absolute;
-            top: 0;
-            right: 0;
-            padding: 8px 16px;
-            background: rgba(239, 68, 68, 0.8);
-            border: none;
-            border-radius: 6px;
-            color: white;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .logout-btn:hover {
-            background: rgba(239, 68, 68, 1);
-        }
-
-        /* Dashboard */
-        .dashboard {
-            background: rgba(30, 30, 50, 0.8);
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            border: 2px solid #4a5568;
-        }
-
-        .team-level {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .team-level h2 {
-            color: #8b5cf6;
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-
-        .team-level .level {
-            font-size: 48px;
-            font-weight: bold;
-            color: #fbbf24;
-            text-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
-        }
-
-        .players-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        .player-card {
-            background: rgba(20, 20, 35, 0.9);
-            padding: 20px;
-            border-radius: 12px;
-            border: 3px solid #4a5568;
-            transition: border-color 0.3s;
-        }
-
-        .player-card.leader {
-            border-color: #fbbf24;
-            box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
-        }
-
-        .player-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .player-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #fbbf24;
-        }
-
-        .player-level {
-            font-size: 20px;
-            color: #8b5cf6;
-            font-weight: bold;
-        }
-
-        .xp-bar-container {
-            background: rgba(10, 10, 20, 0.8);
-            height: 30px;
-            border-radius: 15px;
-            overflow: hidden;
-            position: relative;
-            margin-bottom: 10px;
-            border: 2px solid #4a5568;
-        }
-
-        .xp-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #8b5cf6 0%, #fbbf24 100%);
-            transition: width 0.5s ease;
-            border-radius: 15px;
-            box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
-        }
-
-        .xp-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-weight: bold;
-            font-size: 14px;
-            color: white;
-            text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
-            z-index: 1;
-        }
-
-        .leaderboard {
-            text-align: center;
-            padding: 20px;
-            background: rgba(139, 92, 246, 0.1);
-            border-radius: 10px;
-            border: 2px solid #8b5cf6;
-        }
-
-        .leaderboard h3 {
-            color: #fbbf24;
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .leader-crown {
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-
-        /* Subjects */
-        .subjects-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .subject-tab {
-            padding: 15px;
-            background: rgba(30, 30, 50, 0.8);
-            border: 2px solid #4a5568;
-            border-radius: 10px;
-            cursor: pointer;
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-
-        .subject-tab:hover {
-            border-color: #fbbf24;
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(251, 191, 36, 0.3);
-        }
-
-        .subject-tab.active {
-            background: linear-gradient(135deg, #8b5cf6 0%, #fbbf24 100%);
-            border-color: #fbbf24;
-            color: #1a1a2e;
-        }
-
-        /* Chapters */
-        .chapters-container {
-            background: rgba(30, 30, 50, 0.8);
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            border: 2px solid #4a5568;
-        }
-
-        .class-section {
-            margin-bottom: 30px;
-        }
-
-        .class-header {
-            font-size: 24px;
-            color: #8b5cf6;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #4a5568;
-        }
-
-        .chapter-item {
-            background: rgba(20, 20, 35, 0.9);
-            border: 2px solid #4a5568;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            overflow: hidden;
-        }
-
-        .chapter-header {
-            padding: 15px 20px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: background 0.3s;
-        }
-
-        .chapter-header:hover {
-            background: rgba(139, 92, 246, 0.1);
-        }
-
-        .chapter-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #fbbf24;
-            flex: 1;
-        }
-
-        .behemoth-badge {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-right: 10px;
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-        }
-
-        .chapter-toggle {
-            font-size: 20px;
-            transition: transform 0.3s;
-        }
-
-        .chapter-toggle.open {
-            transform: rotate(180deg);
-        }
-
-        .chapter-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .chapter-content.open {
-            max-height: 500px;
-        }
-
-        .chapter-tasks {
-            padding: 20px;
-            background: rgba(10, 10, 20, 0.6);
-        }
-
-        .task-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            margin-bottom: 10px;
-            background: rgba(30, 30, 50, 0.8);
-            border-radius: 8px;
-            border: 1px solid #4a5568;
-        }
-
-        .task-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex: 1;
-        }
-
-        .task-checkbox input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-            accent-color: #8b5cf6;
-        }
-
-        .task-checkbox label {
-            cursor: pointer;
-            font-size: 16px;
-            color: #e0e0e0;
-        }
-
-        .task-checkbox input[type="checkbox"]:checked + label {
-            text-decoration: line-through;
-            color: #6b7280;
-        }
-
-        .task-xp {
-            font-weight: bold;
-            color: #fbbf24;
-            font-size: 14px;
-        }
-
-        /* Level Up Animation */
-        .level-up-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .level-up-overlay.show {
-            display: flex;
-            animation: fadeIn 0.5s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .level-up-content {
-            text-align: center;
-            animation: scaleUp 0.8s ease;
-        }
-
-        @keyframes scaleUp {
-            0% { transform: scale(0); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-
-        .level-up-content h2 {
-            font-size: 64px;
-            color: #fbbf24;
-            text-shadow: 0 0 30px rgba(251, 191, 36, 1);
-            margin-bottom: 20px;
-        }
-
-        .level-up-content .level-number {
-            font-size: 96px;
-            color: #8b5cf6;
-            text-shadow: 0 0 40px rgba(139, 92, 246, 1);
-            font-weight: bold;
-        }
-
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            .players-container {
-                grid-template-columns: 1fr;
-            }
-
-            .subjects-container {
-                grid-template-columns: 1fr;
-            }
-
-            .header h1 {
-                font-size: 28px;
-            }
-
-            .logout-btn {
-                position: static;
-                margin-top: 10px;
-                width: 100%;
-            }
-
-            .dashboard, .chapters-container {
-                padding: 20px;
-            }
-
-            .level-up-content h2 {
-                font-size: 48px;
-            }
-
-            .level-up-content .level-number {
-                font-size: 72px;
-            }
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .setup-notice {
-            background: rgba(251, 191, 36, 0.1);
-            border: 2px solid #fbbf24;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            color: #fbbf24;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .setup-notice strong {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 16px;
-        }
-
-        .setup-notice code {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-        }
-    </style>
-</head>
-<body>
-    <!-- Login Screen -->
-    <div id="loginContainer" class="login-container">
-        <h1>🎮 Study RPG Tracker</h1>
-        
-        <div class="setup-notice">
-            <strong>⚠️ Firebase Setup Required</strong>
-            Before using this app, you need to:
-            <br>1. Create a Firebase project at <code>firebase.google.com</code>
-            <br>2. Enable Realtime Database
-            <br>3. Replace the Firebase config below (lines 450-457)
-            <br>4. Set database rules to allow read/write for testing
-        </div>
-
-        <div id="syncStatus" class="sync-status offline">🔌 Connecting to Firebase...</div>
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <select id="username" required>
-                    <option value="">Select User</option>
-                    <option value="partnerA">Partner A</option>
-                    <option value="partnerB">Partner B</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Enter your password" required>
-            </div>
-            <button type="submit" class="btn">Login</button>
-        </form>
-    </div>
-
-    <!-- Main App -->
-    <div id="appContainer" class="app-container">
-        <div class="header">
-            <h1>🎮 Study RPG Syllabus Tracker</h1>
-            <button class="logout-btn" onclick="logout()">Logout</button>
-        </div>
-
-        <div id="syncStatusApp" class="sync-status online" style="max-width: 300px; margin: 0 auto 20px;">
-            ☁️ Synced with Cloud
-        </div>
-
-        <!-- Dashboard -->
-        <div class="dashboard">
-            <div class="team-level">
-                <h2>⚔️ Team Level</h2>
-                <div class="level" id="teamLevel">1</div>
-                <div style="color: #a0aec0; margin-top: 10px;">Combined XP: <span id="teamXP">0</span></div>
-            </div>
-
-            <div class="players-container">
-                <div class="player-card" id="playerCardA">
-                    <div class="player-header">
-                        <div class="player-name">Partner A</div>
-                        <div class="player-level">Level <span id="levelA">1</span></div>
-                    </div>
-                    <div class="xp-bar-container">
-                        <div class="xp-bar" id="xpBarA" style="width: 0%"></div>
-                        <div class="xp-text" id="xpTextA">0 / 300 XP</div>
-                    </div>
-                </div>
-
-                <div class="player-card" id="playerCardB">
-                    <div class="player-header">
-                        <div class="player-name">Partner B</div>
-                        <div class="player-level">Level <span id="levelB">1</span></div>
-                    </div>
-                    <div class="xp-bar-container">
-                        <div class="xp-bar" id="xpBarB" style="width: 0%"></div>
-                        <div class="xp-text" id="xpTextB">0 / 300 XP</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="leaderboard">
-                <div class="leader-crown">👑</div>
-                <h3 id="leaderText">Both players are tied!</h3>
-            </div>
-        </div>
-
-        <!-- Subject Tabs -->
-        <div class="subjects-container">
-            <div class="subject-tab active" onclick="showSubject('physics')">⚛️ Physics</div>
-            <div class="subject-tab" onclick="showSubject('chemistry')">🧪 Chemistry</div>
-            <div class="subject-tab" onclick="showSubject('maths')">📐 Mathematics</div>
-            <div class="subject-tab" onclick="showSubject('cs')">💻 Computer Science</div>
-            <div class="subject-tab" onclick="showSubject('english')">📚 English</div>
-        </div>
-
-        <!-- Chapters Container -->
-        <div id="chaptersContainer" class="chapters-container">
-            <!-- Chapters will be dynamically loaded here -->
-        </div>
-    </div>
-
-    <!-- Level Up Animation -->
-    <div id="levelUpOverlay" class="level-up-overlay">
-        <div class="level-up-content">
-            <h2>LEVEL UP!</h2>
-            <div class="level-number" id="levelUpNumber">2</div>
-        </div>
-    </div>
-
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-        import { getDatabase, ref, set, get, onValue, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
-
-        // ============================================
-        // REPLACE THIS WITH YOUR FIREBASE CONFIG
-        // ============================================
-        const firebaseConfig = {
-            apiKey: "YOUAIzaSyBKVn0xyx9_bqKn1PGAD73sFINujJuDwVk",
-            authDomain: "final-482a4.firebaseapp.com",
-            databaseURL: "https://final-482a4-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "final-482a4",
-            storageBucket: "final-482a4.firebasestorage.app",
-            messagingSenderId: "194266232103",
-            appId: "1:194266232103:web:0cdab418b15d0341a92502"
-        };
-
-        // Initialize Firebase
-        let app, database, isFirebaseConnected = false;
-        
-        try {
-            app = initializeApp(firebaseConfig);
-            database = getDatabase(app);
-            isFirebaseConnected = true;
-            console.log('✅ Firebase initialized successfully');
-        } catch (error) {
-            console.error('❌ Firebase initialization error:', error);
-            updateSyncStatus(false, 'error');
-        }
-
-        // XP Level Thresholds (Level 1-20)
-        const XP_LEVELS = [
-            0, 300, 750, 1500, 2500, 4000, 6000, 8500, 11500, 15000,
-            19000, 24000, 30000, 37000, 45000, 54000, 64000, 75000, 85000
-        ];
-
-        // Task XP Values
-        const TASK_XP = {
-            concept: 10,
-            ncert: 30,
-            pyq: 50,
-            legend: 100
-        };
-
-        // User Credentials
-        const USERS = {
-            partnerA: { password: 'purvi2026', name: 'PURVI' },
-            partnerB: { password: 'terimkc', name: 'ABHISHEK' }
-        };
-
-        // Current logged-in user
-        let currentUser = null;
-
-        // Game State
-        let gameData = {
-            partnerA: { xp: 0, level: 1, tasks: {} },
-            partnerB: { xp: 0, level: 1, tasks: {} }
-        };
-
-        // Current subject
-        let currentSubject = 'physics';
-
-        // Storage key for offline fallback
-        const STORAGE_KEY = 'studyRPG_SharedData_v1';
-
-        // Sync state
-        let isSyncing = false;
-        let dataListener = null;
-
-        // Chapter Data
-        const CHAPTERS = {
-            physics: {
-                class11: [
-                    { name: "Units and Measurements", desc: "SI units, Errors in measurement, Significant figures, Dimensional analysis.", behemoth: false },
-                    { name: "Motion in a Straight Line", desc: "Frame of reference, v−t and x−t graphs, Uniformly accelerated motion.", behemoth: false },
-                    { name: "Motion in a Plane", desc: "Scalar/Vector products, Projectile motion, Uniform circular motion.", behemoth: false },
-                    { name: "Laws of Motion", desc: "Newton's Laws, Conservation of momentum, Equilibrium of forces, Friction, Centripetal force.", behemoth: false },
-                    { name: "Work, Energy, and Power", desc: "Work-energy theorem, Potential energy of a spring, Conservative forces, Collisions.", behemoth: false },
-                    { name: "Rotational Motion", desc: "Center of mass, Torque, Angular momentum, Moment of inertia, Radius of gyration.", behemoth: true },
-                    { name: "Gravitation", desc: "Kepler's laws, Universal law of gravitation, Acceleration due to gravity (g), Escape velocity.", behemoth: false },
-                    { name: "Mechanical Properties of Solids", desc: "Stress-strain relationship, Hooke's law, Young's modulus.", behemoth: false },
-                    { name: "Mechanical Properties of Fluids", desc: "Pascal's law, Viscosity, Bernoulli's theorem, Surface tension.", behemoth: false },
-                    { name: "Thermodynamics", desc: "Zeroth, First, and Second laws, Isothermal and adiabatic processes.", behemoth: false },
-                    { name: "Kinetic Theory", desc: "Equation of state of a perfect gas, Degrees of freedom, Specific heat capacities.", behemoth: false },
-                    { name: "Oscillations & Waves", desc: "SHM, Resonance, Doppler effect, Speed of traveling waves.", behemoth: false }
-                ],
-                class12: [
-                    { name: "Electric Charges & Fields", desc: "Coulomb's law, Electric field lines, Electric dipole, Gauss's theorem.", behemoth: true },
-                    { name: "Electrostatic Potential", desc: "Equipotential surfaces, Dielectrics, Capacitors in series/parallel, Energy in capacitor.", behemoth: false },
-                    { name: "Current Electricity", desc: "Ohm's law, V-I characteristics, Kirchhoff's laws, Wheatstone bridge.", behemoth: true },
-                    { name: "Moving Charges & Magnetism", desc: "Biot-Savart law, Ampere's law, Force on a moving charge, Moving coil galvanometer.", behemoth: false },
-                    { name: "Magnetism and Matter", desc: "Bar magnet, Magnetic field lines, Magnetic properties (Dia, Para, Ferro).", behemoth: false },
-                    { name: "Electromagnetic Induction", desc: "Faraday's law, Lenz's Law, Self and mutual induction.", behemoth: false },
-                    { name: "Alternating Current", desc: "LCR series circuit, Resonance, Power in AC circuits, Transformers.", behemoth: false },
-                    { name: "Optics", desc: "Mirror/Lens formula, Total internal reflection, Optical instruments, Huygens principle, Interference.", behemoth: true },
-                    { name: "Modern Physics", desc: "Photoelectric effect, Bohr's model, Mass-energy relation, Nuclear fission/fusion.", behemoth: false },
-                    { name: "Semiconductors", desc: "Energy bands, p-n junction diode, I-V characteristics, Diode as a rectifier.", behemoth: false }
-                ]
-            },
-            chemistry: {
-                class11: [
-                    { name: "Basic Concepts", desc: "Dalton's theory, Mole concept, Stoichiometry.", behemoth: false },
-                    { name: "Structure of Atom", desc: "Bohr's model, Quantum numbers, Aufbau principle, Pauli's exclusion.", behemoth: false },
-                    { name: "Chemical Bonding", desc: "VSEPR theory, Hybridization (sp,sp2,sp3,dsp2), Hydrogen bonding.", behemoth: true },
-                    { name: "Equilibrium", desc: "Le Chatelier's principle, pH, Solubility product, Buffer solutions.", behemoth: false },
-                    { name: "Organic Chemistry", desc: "Nomenclature, Isomerism, Inductive/Electromeric effects, Resonance.", behemoth: true }
-                ],
-                class12: [
-                    { name: "Solutions", desc: "Raoult's law, Colligative properties, Van't Hoff factor.", behemoth: false },
-                    { name: "Electrochemistry", desc: "Nernst equation, Kohlrausch's Law, Electrolytic cells.", behemoth: false },
-                    { name: "Chemical Kinetics", desc: "Rate law, Order/Molecularity, Integrated rate equations, Collision theory.", behemoth: false },
-                    { name: "Coordination Compounds", desc: "IUPAC nomenclature, Werner's theory, VBT, Crystal Field Theory.", behemoth: false },
-                    { name: "Aldehydes, Ketones & Acids", desc: "Nucleophilic addition, Alpha hydrogen reactivity, Carboxylic acid acidity.", behemoth: true }
-                ]
-            },
-            maths: {
-                class11: [
-                    { name: "Sets & Functions", desc: "Venn diagrams, Domain/Range of functions, Trigonometric identities.", behemoth: false },
-                    { name: "Algebra", desc: "Complex numbers, Permutations & Combinations, Binomial Theorem, GP.", behemoth: false },
-                    { name: "Coordinate Geometry", desc: "Straight lines (slope-intercept), Conic sections (Circle, Ellipse, Parabola).", behemoth: false }
-                ],
-                class12: [
-                    { name: "Calculus", desc: "Continuity, Chain rule, Maxima/Minima, Integration by parts, Definite integrals.", behemoth: true },
-                    { name: "Vectors & 3D", desc: "Scalar/Vector products, Direction cosines, Shortest distance between lines.", behemoth: true },
-                    { name: "Probability", desc: "Conditional probability, Bayes' theorem, Random variables.", behemoth: false }
-                ]
-            },
-            cs: {
-                class12: [
-                    { name: "Computational Thinking-2", desc: "Python Revision, Functions, Exception Handling, Text/CSV/Binary File handling.", behemoth: true },
-                    { name: "Computer Networks", desc: "Topologies, Protocols (HTTP, TCP/IP), Network Devices (Routers, Switches).", behemoth: false },
-                    { name: "Database Management", desc: "SQL Commands (DDL/DML), Joins, Aggregate functions, Python-SQL Interface.", behemoth: true }
-                ]
-            },
-            english: {
-                class12: [
-                    { name: "Literature (Flamingo/Vistas)", desc: "Chapter summaries and theme analysis for all prose and poetry.", behemoth: false },
-                    { name: "Writing Skills", desc: "Format for Formal Invitations, Letters to Editor, Article writing.", behemoth: false }
-                ]
-            }
-        };
-
-        // ==========================================
-        // FIREBASE SYNC FUNCTIONS
-        // ==========================================
-
-        // Save data to Firebase
-        async function saveToFirebase() {
-            if (!isFirebaseConnected) {
-                console.warn('Firebase not connected, saving to localStorage only');
-                saveToLocalStorage();
-                return;
-            }
-
-            try {
-                isSyncing = true;
-                updateSyncStatus(true, 'syncing');
-
-                const dbRef = ref(database, 'studyRPG/gameData');
-                await set(dbRef, gameData);
-
-                console.log('✅ Data synced to Firebase:', gameData);
-                updateSyncStatus(true, 'saved');
-                
-                // Also save to localStorage as backup
-                saveToLocalStorage();
-            } catch (error) {
-                console.error('❌ Firebase save error:', error);
-                updateSyncStatus(false, 'error');
-                // Fallback to localStorage
-                saveToLocalStorage();
-            } finally {
-                isSyncing = false;
-            }
-        }
-
-        // Load data from Firebase
-        async function loadFromFirebase() {
-            if (!isFirebaseConnected) {
-                console.warn('Firebase not connected, loading from localStorage');
-                loadFromLocalStorage();
-                return;
-            }
-
-            try {
-                updateSyncStatus(true, 'syncing');
-
-                const dbRef = ref(database, 'studyRPG/gameData');
-                const snapshot = await get(dbRef);
-
-                if (snapshot.exists()) {
-                    gameData = snapshot.val();
-                    console.log('✅ Data loaded from Firebase:', gameData);
-                    
-                    // Ensure both users exist
-                    if (!gameData.partnerA) {
-                        gameData.partnerA = { xp: 0, level: 1, tasks: {} };
-                    }
-                    if (!gameData.partnerB) {
-                        gameData.partnerB = { xp: 0, level: 1, tasks: {} };
-                    }
-                } else {
-                    console.log('No Firebase data found, using defaults');
-                    gameData = {
-                        partnerA: { xp: 0, level: 1, tasks: {} },
-                        partnerB: { xp: 0, level: 1, tasks: {} }
-                    };
-                    await saveToFirebase();
-                }
-
-                updateSyncStatus(true, 'saved');
-                
-                // Save to localStorage as backup
-                saveToLocalStorage();
-            } catch (error) {
-                console.error('❌ Firebase load error:', error);
-                updateSyncStatus(false, 'error');
-                // Fallback to localStorage
-                loadFromLocalStorage();
-            }
-        }
-
-        // Listen for real-time updates from Firebase
-        function setupRealtimeListener() {
-            if (!isFirebaseConnected) return;
-
-            const dbRef = ref(database, 'studyRPG/gameData');
-            
-            dataListener = onValue(dbRef, (snapshot) => {
-                if (snapshot.exists() && !isSyncing) {
-                    const newData = snapshot.val();
-                    
-                    // Only update if data actually changed
-                    if (JSON.stringify(newData) !== JSON.stringify(gameData)) {
-                        console.log('🔄 Real-time update received from Firebase');
-                        gameData = newData;
-                        
-                        // Update UI
-                        updateDashboard();
-                        loadChapters(); // Reload chapters to reflect task states
-                        
-                        updateSyncStatus(true, 'saved');
-                    }
-                }
-            }, (error) => {
-                console.error('❌ Firebase listener error:', error);
-                updateSyncStatus(false, 'error');
+<script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getDatabase, ref, set, get, onValue, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+    // ============================================
+    // FIREBASE CONFIG
+    // ============================================
+    const firebaseConfig = {
+        apiKey: "YOUAIzaSyBKVn0xyx9_bqKn1PGAD73sFINujJuDwVk",
+        authDomain: "final-482a4.firebaseapp.com",
+        databaseURL: "https://final-482a4-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "final-482a4",
+        storageBucket: "final-482a4.firebasestorage.app",
+        messagingSenderId: "194266232103",
+        appId: "1:194266232103:web:0cdab418b15d0341a92502"
+    };
+
+    // Initialize Firebase
+    let app, database, isFirebaseConnected = false;
+    
+    try {
+        app = initializeApp(firebaseConfig);
+        database = getDatabase(app);
+        isFirebaseConnected = true;
+        console.log('✅ Firebase initialized');
+    } catch (error) {
+        console.error('❌ Firebase error:', error);
+    }
+
+    // Constants
+    const XP_LEVELS = [0, 300, 750, 1500, 2500, 4000, 6000, 8500, 11500, 15000, 19000, 24000, 30000, 37000, 45000, 54000, 64000, 75000, 85000];
+    const TASK_XP = { concept: 10, ncert: 30, pyq: 50, legend: 100 };
+    const USERS = {
+        partnerA: { password: 'purvi2026', name: 'PURVI' },
+        partnerB: { password: 'terimkc', name: 'ABHISHEK' }
+    };
+
+    let currentUser = null;
+    let currentSubject = 'physics';
+    let isSyncing = false;
+    let dataListener = null;
+    const STORAGE_KEY = 'studyRPG_SharedData_v1';
+
+    let gameData = {
+        partnerA: { xp: 0, level: 1, tasks: {} },
+        partnerB: { xp: 0, level: 1, tasks: {} }
+    };
+
+    const CHAPTERS = {
+        physics: {
+            class11: [
+                { name: "Units and Measurements", desc: "SI units, Errors, Dimensional analysis.", behemoth: false },
+                { name: "Motion in a Straight Line", desc: "Graphs, Uniformly accelerated motion.", behemoth: false },
+                { name: "Motion in a Plane", desc: "Vectors, Projectile motion.", behemoth: false },
+                { name: "Laws of Motion", desc: "Newton's Laws, Friction.", behemoth: false },
+                { name: "Work, Energy, Power", desc: "Theorem, Collisions.", behemoth: false },
+                { name: "Rotational Motion", desc: "Torque, Moment of Inertia.", behemoth: true },
+                { name: "Gravitation", desc: "Kepler's laws, Escape velocity.", behemoth: false },
+                { name: "Solids & Fluids", desc: "Hooke's law, Bernoulli's theorem.", behemoth: false },
+                { name: "Thermodynamics", desc: "Laws, Adiabatic processes.", behemoth: false },
+                { name: "Oscillations & Waves", desc: "SHM, Doppler effect.", behemoth: false }
+            ],
+            class12: [
+                { name: "Electric Charges & Fields", desc: "Coulomb's law, Gauss theorem.", behemoth: true },
+                { name: "Electrostatic Potential", desc: "Capacitors, Dielectrics.", behemoth: false },
+                { name: "Current Electricity", desc: "Kirchhoff's laws, Wheatstone bridge.", behemoth: true },
+                { name: "Magnetism", desc: "Biot-Savart, Ampere's law.", behemoth: false },
+                { name: "EMI & AC", desc: "Lenz's Law, LCR Circuits.", behemoth: false },
+                { name: "Optics", desc: "Lens formula, Interference.", behemoth: true },
+                { name: "Modern Physics", desc: "Photoelectric effect, Atoms.", behemoth: false },
+                { name: "Semiconductors", desc: "p-n junction, Rectifiers.", behemoth: false }
+            ]
+        },
+        chemistry: {
+            class11: [
+                { name: "Basic Concepts", desc: "Mole concept, Stoichiometry.", behemoth: false },
+                { name: "Structure of Atom", desc: "Quantum numbers, Orbitals.", behemoth: false },
+                { name: "Chemical Bonding", desc: "VSEPR, Hybridization.", behemoth: true },
+                { name: "Equilibrium", desc: "pH, Buffer solutions.", behemoth: false },
+                { name: "Organic Chemistry", desc: "Nomenclature, Effects.", behemoth: true }
+            ],
+            class12: [
+                { name: "Solutions", desc: "Raoult's law, Colligative props.", behemoth: false },
+                { name: "Electrochemistry", desc: "Nernst equation, Cells.", behemoth: false },
+                { name: "Chemical Kinetics", desc: "Rate law, Collision theory.", behemoth: false },
+                { name: "Coordination Compounds", desc: "CFT, Nomenclature.", behemoth: false },
+                { name: "Aldehydes & Ketones", desc: "Nucleophilic addition.", behemoth: true }
+            ]
+        },
+        maths: {
+            class11: [
+                { name: "Sets & Functions", desc: "Venn diagrams, Trig identities.", behemoth: false },
+                { name: "Algebra", desc: "P&C, Binomial, Complex Nos.", behemoth: false },
+                { name: "Coordinate Geometry", desc: "Lines, Conics.", behemoth: false }
+            ],
+            class12: [
+                { name: "Calculus", desc: "Integration, Differentiation.", behemoth: true },
+                { name: "Vectors & 3D", desc: "Scalar products, Distance.", behemoth: true },
+                { name: "Probability", desc: "Bayes' theorem.", behemoth: false }
+            ]
+        },
+        cs: {
+            class12: [
+                { name: "Python Review", desc: "Functions, File handling.", behemoth: true },
+                { name: "Networking", desc: "Protocols, Topologies.", behemoth: false },
+                { name: "SQL & DB", desc: "Joins, Aggregates.", behemoth: true }
+            ]
+        },
+        english: {
+            class12: [
+                { name: "Literature", desc: "Flamingo & Vistas.", behemoth: false },
+                { name: "Writing Skills", desc: "Letters, Articles.", behemoth: false }
+            ]
+        }
+    };
+
+    // ==========================================
+    // GLOBAL EXPOSURE (CRITICAL FIX)
+    // ==========================================
+
+    window.showSubject = function(subject) {
+        currentSubject = subject;
+        const tabs = document.querySelectorAll('.subject-tab');
+        tabs.forEach(tab => tab.classList.remove('active'));
+        if (event && event.target) event.target.classList.add('active');
+        window.loadChapters();
+    };
+
+    window.loadChapters = function() {
+        const container = document.getElementById('chaptersContainer');
+        const subjectData = CHAPTERS[currentSubject];
+        let html = '';
+
+        for (const [className, chapters] of Object.entries(subjectData)) {
+            const classTitle = className === 'class11' ? 'Class 11' : 'Class 12';
+            html += `<div class="class-section"><h2 class="class-header">${classTitle}</h2>`;
+            chapters.forEach((chapter, index) => {
+                const chapterId = `${currentSubject}_${className}_${index}`;
+                html += renderChapter(chapter, chapterId);
             });
-
-            console.log('✅ Real-time listener activated');
+            html += '</div>';
         }
+        container.innerHTML = html;
+    };
 
-        // Remove listener on logout
-        function removeRealtimeListener() {
-            if (dataListener) {
-                // Note: With modular SDK, we don't need to explicitly unsubscribe
-                // as the listener is garbage collected
-                dataListener = null;
-                console.log('🔌 Real-time listener removed');
-            }
-        }
-
-        // ==========================================
-        // LOCALSTORAGE FALLBACK
-        // ==========================================
-
-        function saveToLocalStorage() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData));
-                console.log('💾 Data saved to localStorage');
-            } catch (error) {
-                console.error('❌ localStorage save error:', error);
-            }
-        }
-
-        function loadFromLocalStorage() {
-            try {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    const parsedData = JSON.parse(saved);
-                    if (parsedData.partnerA && parsedData.partnerB) {
-                        gameData = parsedData;
-                        console.log('💾 Data loaded from localStorage');
-                    }
-                }
-            } catch (error) {
-                console.error('❌ localStorage load error:', error);
-            }
-        }
-
-        // ==========================================
-        // UI UPDATE FUNCTIONS
-        // ==========================================
-
-        function updateSyncStatus(success, type = 'saved') {
-            const statusLogin = document.getElementById('syncStatus');
-            const statusApp = document.getElementById('syncStatusApp');
-
-            if (success) {
-                if (type === 'syncing') {
-                    if (statusLogin) {
-                        statusLogin.className = 'sync-status syncing';
-                        statusLogin.textContent = '🔄 Syncing...';
-                    }
-                    if (statusApp) {
-                        statusApp.className = 'sync-status syncing';
-                        statusApp.textContent = '🔄 Syncing to Cloud...';
-                    }
-                } else if (type === 'saved') {
-                    if (statusLogin) {
-                        statusLogin.className = 'sync-status online';
-                        statusLogin.textContent = '☁️ Cloud Sync Active';
-                    }
-                    if (statusApp) {
-                        statusApp.className = 'sync-status online';
-                        statusApp.textContent = '✅ Synced with Cloud';
-                        
-                        // Flash sync indicator
-                        setTimeout(() => {
-                            if (statusApp) {
-                                statusApp.textContent = '☁️ Synced with Cloud';
-                            }
-                        }, 2000);
-                    }
-                }
-            } else {
-                if (statusLogin) {
-                    statusLogin.className = 'sync-status offline';
-                    statusLogin.textContent = '⚠️ Offline Mode';
-                }
-                if (statusApp) {
-                    statusApp.className = 'sync-status offline';
-                    statusApp.textContent = '⚠️ Offline - Using Local Storage';
-                }
-            }
-        }
-
-        // Calculate Level from XP
-        function calculateLevel(xp) {
-            for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
-                if (xp >= XP_LEVELS[i]) {
-                    return i + 1;
-                }
-            }
-            return 1;
-        }
-
-        // Get XP needed for next level
-        function getXPForNextLevel(level) {
-            if (level >= 20) return XP_LEVELS[18];
-            return XP_LEVELS[level];
-        }
-
-        // Update Dashboard
-        function updateDashboard() {
-            // Update Partner A
-            const levelA = calculateLevel(gameData.partnerA.xp);
-            const xpA = gameData.partnerA.xp;
-            const nextLevelA = getXPForNextLevel(levelA);
-            const prevLevelA = levelA > 1 ? XP_LEVELS[levelA - 1] : 0;
-            const progressA = ((xpA - prevLevelA) / (nextLevelA - prevLevelA)) * 100;
-
-            document.getElementById('levelA').textContent = levelA;
-            document.getElementById('xpBarA').style.width = progressA + '%';
-            document.getElementById('xpTextA').textContent = `${xpA} / ${nextLevelA} XP`;
-
-            // Update Partner B
-            const levelB = calculateLevel(gameData.partnerB.xp);
-            const xpB = gameData.partnerB.xp;
-            const nextLevelB = getXPForNextLevel(levelB);
-            const prevLevelB = levelB > 1 ? XP_LEVELS[levelB - 1] : 0;
-            const progressB = ((xpB - prevLevelB) / (nextLevelB - prevLevelB)) * 100;
-
-            document.getElementById('levelB').textContent = levelB;
-            document.getElementById('xpBarB').style.width = progressB + '%';
-            document.getElementById('xpTextB').textContent = `${xpB} / ${nextLevelB} XP`;
-
-            // Team Level
-            const teamXP = xpA + xpB;
-            const teamLevel = calculateLevel(teamXP);
-            document.getElementById('teamLevel').textContent = teamLevel;
-            document.getElementById('teamXP').textContent = teamXP;
-
-            // Leaderboard
-            const cardA = document.getElementById('playerCardA');
-            const cardB = document.getElementById('playerCardB');
-            const leaderText = document.getElementById('leaderText');
-
-            cardA.classList.remove('leader');
-            cardB.classList.remove('leader');
-
-            if (xpA > xpB) {
-                cardA.classList.add('leader');
-                leaderText.textContent = `Partner A is in the lead! (+${xpA - xpB} XP)`;
-            } else if (xpB > xpA) {
-                cardB.classList.add('leader');
-                leaderText.textContent = `Partner B is in the lead! (+${xpB - xpA} XP)`;
-            } else {
-                leaderText.textContent = 'Both players are tied!';
-            }
-        }
-
-        // Initialize
-        async function init() {
-            await loadFromFirebase();
-            setupRealtimeListener();
-            updateDashboard();
-        }
-
-        // Login
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            if (USERS[username] && USERS[username].password === password) {
-                currentUser = username;
-                document.getElementById('loginContainer').style.display = 'none';
-                document.getElementById('appContainer').classList.add('active');
-                await init();
-                loadChapters();
-            } else {
-                alert('Invalid username or password!');
-            }
-        });
-
-        // Logout
-        window.logout = function() {
-            currentUser = null;
-            removeRealtimeListener();
-            document.getElementById('loginContainer').style.display = 'block';
-            document.getElementById('appContainer').classList.remove('active');
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-        }
-
-        // Show Subject
-        window.showSubject = function(subject) {
-            currentSubject = subject;
-
-            // Update active tab
-            const tabs = document.querySelectorAll('.subject-tab');
-            tabs.forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
-
-            loadChapters();
-        }
-
-        // Load Chapters
-        function loadChapters() {
-            const container = document.getElementById('chaptersContainer');
-            const subjectData = CHAPTERS[currentSubject];
-
-            let html = '';
-
-            for (const [className, chapters] of Object.entries(subjectData)) {
-                const classTitle = className === 'class11' ? 'Class 11' : 'Class 12';
-                html += `<div class="class-section">
-                    <h2 class="class-header">${classTitle}</h2>`;
-
-                chapters.forEach((chapter, index) => {
-                    const chapterId = `${currentSubject}_${className}_${index}`;
-                    html += renderChapter(chapter, chapterId);
-                });
-
-                html += '</div>';
-            }
-
-            container.innerHTML = html;
-        }
-
-        // Render Chapter
-        function renderChapter(chapter, chapterId) {
-            const behemothBadge = chapter.behemoth ? '<span class="behemoth-badge">BEHEMOTH 1.5x</span>' : '';
-
-            return `
-                <div class="chapter-item">
-                    <div class="chapter-header" onclick="toggleChapter('${chapterId}')">
-                        <div class="chapter-title">
-                            ${behemothBadge}
-                            ${chapter.name}
-                        </div>
-                        <div class="chapter-toggle" id="toggle_${chapterId}">▼</div>
-                    </div>
-                    <div class="chapter-content" id="content_${chapterId}">
-                        <div class="chapter-tasks">
-                            <div style="color: #a0aec0; margin-bottom: 15px; font-size: 14px;">${chapter.desc}</div>
-                            ${renderTask(chapterId, 'concept', 'Topic Concept', chapter.behemoth)}
-                            ${renderTask(chapterId, 'ncert', 'NCERT Exercises', chapter.behemoth)}
-                            ${renderTask(chapterId, 'pyq', 'PYQ Conquest', chapter.behemoth)}
-                            ${renderTask(chapterId, 'legend', 'Chapter Legend (Completion)', chapter.behemoth)}
-                        </div>
+    function renderChapter(chapter, chapterId) {
+        const behemothBadge = chapter.behemoth ? '<span class="behemoth-badge">BEHEMOTH 1.5x</span>' : '';
+        return `
+            <div class="chapter-item">
+                <div class="chapter-header" onclick="window.toggleChapter('${chapterId}')">
+                    <div class="chapter-title">${behemothBadge} ${chapter.name}</div>
+                    <div class="chapter-toggle" id="toggle_${chapterId}">▼</div>
+                </div>
+                <div class="chapter-content" id="content_${chapterId}">
+                    <div class="chapter-tasks">
+                        <div style="color: #a0aec0; margin-bottom: 15px; font-size: 14px;">${chapter.desc}</div>
+                        ${renderTask(chapterId, 'concept', 'Topic Concept', chapter.behemoth)}
+                        ${renderTask(chapterId, 'ncert', 'NCERT Exercises', chapter.behemoth)}
+                        ${renderTask(chapterId, 'pyq', 'PYQ Conquest', chapter.behemoth)}
+                        ${renderTask(chapterId, 'legend', 'Chapter Legend', chapter.behemoth)}
                     </div>
                 </div>
-            `;
-        }
+            </div>`;
+    }
 
-        // Render Task
-        function renderTask(chapterId, taskType, taskName, behemoth) {
-            const xp = TASK_XP[taskType];
-            const multipliedXP = behemoth ? Math.floor(xp * 1.5) : xp;
-            const taskId = `${chapterId}_${taskType}`;
-            const checked = gameData[currentUser]?.tasks[taskId] ? 'checked' : '';
-
-            return `
-                <div class="task-item">
-                    <div class="task-checkbox">
-                        <input type="checkbox" id="${taskId}" ${checked} onchange="toggleTask('${taskId}', ${multipliedXP})">
-                        <label for="${taskId}">${taskName}</label>
-                    </div>
-                    <div class="task-xp">+${multipliedXP} XP</div>
+    function renderTask(chapterId, taskType, taskName, behemoth) {
+        const xp = TASK_XP[taskType];
+        const multipliedXP = behemoth ? Math.floor(xp * 1.5) : xp;
+        const taskId = `${chapterId}_${taskType}`;
+        const checked = gameData[currentUser]?.tasks?.[taskId] ? 'checked' : '';
+        return `
+            <div class="task-item">
+                <div class="task-checkbox">
+                    <input type="checkbox" id="${taskId}" ${checked} onchange="window.toggleTask('${taskId}', ${multipliedXP})">
+                    <label for="${taskId}">${taskName}</label>
                 </div>
-            `;
+                <div class="task-xp">+${multipliedXP} XP</div>
+            </div>`;
+    }
+
+    window.toggleChapter = function(chapterId) {
+        document.getElementById('content_' + chapterId).classList.toggle('open');
+        document.getElementById('toggle_' + chapterId).classList.toggle('open');
+    };
+
+    window.toggleTask = async function(taskId, xp) {
+        const checkbox = document.getElementById(taskId);
+        const oldLevel = calculateLevel(gameData[currentUser].xp);
+
+        if (checkbox.checked) {
+            gameData[currentUser].tasks[taskId] = true;
+            gameData[currentUser].xp += xp;
+        } else {
+            delete gameData[currentUser].tasks[taskId];
+            gameData[currentUser].xp -= xp;
         }
 
-        // Toggle Chapter
-        window.toggleChapter = function(chapterId) {
-            const content = document.getElementById('content_' + chapterId);
-            const toggle = document.getElementById('toggle_' + chapterId);
+        if (calculateLevel(gameData[currentUser].xp) > oldLevel) showLevelUp(calculateLevel(gameData[currentUser].xp));
+        
+        await saveToFirebase();
+        updateDashboard();
+    };
 
-            content.classList.toggle('open');
-            toggle.classList.toggle('open');
-        }
+    window.logout = function() {
+        currentUser = null;
+        document.getElementById('loginContainer').style.display = 'block';
+        document.getElementById('appContainer').classList.remove('active');
+    };
 
-        // Toggle Task
-        window.toggleTask = async function(taskId, xp) {
-            const checkbox = document.getElementById(taskId);
-            const oldLevel = calculateLevel(gameData[currentUser].xp);
+    // Helper Functions
+    function calculateLevel(xp) {
+        for (let i = XP_LEVELS.length - 1; i >= 0; i--) if (xp >= XP_LEVELS[i]) return i + 1;
+        return 1;
+    }
 
-            if (checkbox.checked) {
-                gameData[currentUser].tasks[taskId] = true;
-                gameData[currentUser].xp += xp;
-            } else {
-                delete gameData[currentUser].tasks[taskId];
-                gameData[currentUser].xp -= xp;
-            }
-
-            const newLevel = calculateLevel(gameData[currentUser].xp);
-
-            // Check for level up
-            if (newLevel > oldLevel) {
-                showLevelUp(newLevel);
-            }
-
-            // Save to Firebase
-            await saveToFirebase();
-            updateDashboard();
-        }
-
-        // Show Level Up Animation
-        function showLevelUp(level) {
-            const overlay = document.getElementById('levelUpOverlay');
-            const levelNumber = document.getElementById('levelUpNumber');
-
-            levelNumber.textContent = level;
-            overlay.classList.add('show');
-
-            setTimeout(() => {
-                overlay.classList.remove('show');
-            }, 3000);
-        }
-
-        // Check Firebase *** status on load
-        window.addEventListener('load', () => {
-            if (!isFirebaseConnected) {
-                updateSyncStatus(false, 'error');
-            } else {
-                updateSyncStatus(true, 'saved');
-            }
+    function updateDashboard() {
+        ['partnerA', 'partnerB'].forEach(p => {
+            const level = calculateLevel(gameData[p].xp);
+            const nextXP = XP_LEVELS[level] || XP_LEVELS[18];
+            const prevXP = level > 1 ? XP_LEVELS[level-1] : 0;
+            const progress = ((gameData[p].xp - prevXP) / (nextXP - prevXP)) * 100;
+            
+            document.getElementById('level' + p.slice(-1)).textContent = level;
+            document.getElementById('xpBar' + p.slice(-1)).style.width = progress + '%';
+            document.getElementById('xpText' + p.slice(-1)).textContent = `${gameData[p].xp} / ${nextXP} XP`;
         });
 
-        // Make functions globally accessible
-        window.gameData = gameData;
-        window.saveToFirebase = saveToFirebase;
-    </script>
-</body>
-</html>
+        document.getElementById('teamLevel').textContent = calculateLevel(gameData.partnerA.xp + gameData.partnerB.xp);
+        document.getElementById('teamXP').textContent = gameData.partnerA.xp + gameData.partnerB.xp;
+    }
+
+    async function saveToFirebase() {
+        if (!isFirebaseConnected) return;
+        updateSyncStatus(true, 'syncing');
+        await set(ref(database, 'studyRPG/gameData'), gameData);
+        updateSyncStatus(true, 'saved');
+    }
+
+    function updateSyncStatus(success, type) {
+        const statusApp = document.getElementById('syncStatusApp');
+        if (!statusApp) return;
+        statusApp.className = `sync-status ${type === 'syncing' ? 'syncing' : success ? 'online' : 'offline'}`;
+        statusApp.textContent = type === 'syncing' ? '🔄 Syncing...' : success ? '✅ Synced' : '⚠️ Offline';
+    }
+
+    function showLevelUp(level) {
+        const overlay = document.getElementById('levelUpOverlay');
+        document.getElementById('levelUpNumber').textContent = level;
+        overlay.classList.add('show');
+        setTimeout(() => overlay.classList.remove('show'), 3000);
+    }
+
+    // Login logic
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        if (USERS[user] && USERS[user].password === pass) {
+            currentUser = user;
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('appContainer').classList.add('active');
+            
+            // Initial Data Load
+            const snapshot = await get(ref(database, 'studyRPG/gameData'));
+            if (snapshot.exists()) gameData = snapshot.val();
+            
+            updateDashboard();
+            window.loadChapters();
+        } else {
+            alert('Wrong credentials');
+        }
+    });
+</script>
