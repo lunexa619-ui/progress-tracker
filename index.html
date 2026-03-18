@@ -143,6 +143,12 @@
             margin-bottom: 10px;
         }
 
+        .user-info {
+            color: #8b5cf6;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
         .logout-btn {
             position: absolute;
             top: 0;
@@ -580,6 +586,7 @@
     <div id="appContainer" class="app-container">
         <div class="header">
             <h1>🎮 Study RPG Syllabus Tracker</h1>
+            <div class="user-info">Logged in as: <strong id="currentUserDisplay"></strong></div>
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
 
@@ -711,8 +718,9 @@
         // Current subject
         let currentSubject = 'physics';
 
-        // Storage key for offline fallback
+        // Storage keys
         const STORAGE_KEY = 'studyRPG_SharedData_v1';
+        const LOGIN_KEY = 'studyRPG_LoggedInUser';
 
         // Sync state
         let isSyncing = false;
@@ -790,6 +798,54 @@
                 ]
             }
         };
+
+        // ==========================================
+        // PERSISTENT LOGIN FUNCTIONS
+        // ==========================================
+
+        // Save login state
+        function saveLoginState(username) {
+            try {
+                localStorage.setItem(LOGIN_KEY, username);
+                console.log('💾 Login state saved');
+            } catch (error) {
+                console.error('❌ Failed to save login state:', error);
+            }
+        }
+
+        // Get saved login state
+        function getSavedLoginState() {
+            try {
+                return localStorage.getItem(LOGIN_KEY);
+            } catch (error) {
+                console.error('❌ Failed to get login state:', error);
+                return null;
+            }
+        }
+
+        // Clear login state
+        function clearLoginState() {
+            try {
+                localStorage.removeItem(LOGIN_KEY);
+                console.log('🗑️ Login state cleared');
+            } catch (error) {
+                console.error('❌ Failed to clear login state:', error);
+            }
+        }
+
+        // Auto-login on page load
+        async function checkAutoLogin() {
+            const savedUser = getSavedLoginState();
+            if (savedUser && USERS[savedUser]) {
+                console.log('🔄 Auto-logging in as:', savedUser);
+                currentUser = savedUser;
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('appContainer').classList.add('active');
+                document.getElementById('currentUserDisplay').textContent = USERS[savedUser].name;
+                await init();
+                loadChapters();
+            }
+        }
 
         // ==========================================
         // FIREBASE SYNC FUNCTIONS
@@ -904,8 +960,6 @@
         // Remove listener on logout
         function removeRealtimeListener() {
             if (dataListener) {
-                // Note: With modular SDK, we don't need to explicitly unsubscribe
-                // as the listener is garbage collected
                 dataListener = null;
                 console.log('🔌 Real-time listener removed');
             }
@@ -1066,8 +1120,10 @@
 
             if (USERS[username] && USERS[username].password === password) {
                 currentUser = username;
+                saveLoginState(username); // Save login state
                 document.getElementById('loginContainer').style.display = 'none';
                 document.getElementById('appContainer').classList.add('active');
+                document.getElementById('currentUserDisplay').textContent = USERS[username].name;
                 await init();
                 loadChapters();
             } else {
@@ -1078,6 +1134,7 @@
         // Logout
         window.logout = function() {
             currentUser = null;
+            clearLoginState(); // Clear saved login state
             removeRealtimeListener();
             document.getElementById('loginContainer').style.display = 'block';
             document.getElementById('appContainer').classList.remove('active');
@@ -1212,12 +1269,15 @@
         }
 
         // Check Firebase *** status on load
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             if (!isFirebaseConnected) {
                 updateSyncStatus(false, 'error');
             } else {
                 updateSyncStatus(true, 'saved');
             }
+            
+            // Check for auto-login
+            await checkAutoLogin();
         });
 
         // Make functions globally accessible
